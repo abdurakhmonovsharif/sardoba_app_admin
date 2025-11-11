@@ -16,7 +16,7 @@ export function LoyaltyPieChart({ data }: Props) {
       <ResponsiveContainer>
         <PieChart>
           <Pie data={data.tierCounts} dataKey="users" nameKey="tier" innerRadius={60} outerRadius={90} paddingAngle={2}>
-            {data.tierCounts.map((entry, index) => (
+            {data?.tierCounts?.map((entry, index) => (
               <Cell key={`cell-${entry.tier}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>

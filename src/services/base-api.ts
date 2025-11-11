@@ -94,6 +94,8 @@ const mapUserFromList = (item: BackendUserListItem): User => {
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+// Use Next.js API proxy to bypass CORS issues when communicating with backend
+const PROXY_BASE_URL = "/api/proxy";
 
 const normalizeAuthPayload = (
   payload: unknown,
@@ -130,7 +132,7 @@ const normalizeAuthPayload = (
 };
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: API_URL,
+  baseUrl: PROXY_BASE_URL,
   credentials: "include",
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState)?.auth?.token;
@@ -236,10 +238,10 @@ export const baseApi = createApi({
       providesTags: ["Dashboard"],
     }),
     fetchSystemHealth: builder.query<SystemHealth[], void>({
-      query: () => ({ url: "/system/health" }),
+      query: () => ({ url: "/health" }),
       providesTags: ["Dashboard"],
     }),
-    getUsers: builder.query<PaginatedResponse<User>, Record<string, string | number | boolean> | void>({
+  getUsers: builder.query<PaginatedResponse<User>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/users",
         params,
@@ -307,7 +309,7 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["Cashback", "Users", "Stats"],
     }),
-    getCashbackTransactions: builder.query<PaginatedResponse<CashbackTransaction>, Record<string, string | number | boolean> | void>({
+  getCashbackTransactions: builder.query<PaginatedResponse<CashbackTransaction>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/cashback",
         params,
@@ -353,7 +355,7 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["Staff"],
     }),
-    getNews: builder.query<PaginatedResponse<NewsItem>, Record<string, string | number | boolean> | void>({
+  getNews: builder.query<PaginatedResponse<NewsItem>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/news",
         params,
@@ -380,7 +382,7 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["News", "Media"],
     }),
-    getNotifications: builder.query<PaginatedResponse<NotificationItem>, Record<string, string | number | boolean> | void>({
+  getNotifications: builder.query<PaginatedResponse<NotificationItem>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/notifications",
         params,
@@ -418,7 +420,7 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["Catalog"],
     }),
-    getProducts: builder.query<PaginatedResponse<Product>, Record<string, string | number | boolean> | void>({
+  getProducts: builder.query<PaginatedResponse<Product>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/catalog/products",
         params,
@@ -437,7 +439,7 @@ export const baseApi = createApi({
       query: () => ({ url: "/catalog/sync", method: "POST" }),
       invalidatesTags: ["Catalog"],
     }),
-    getMediaLibrary: builder.query<PaginatedResponse<MediaFile>, Record<string, string | number | boolean> | void>({
+  getMediaLibrary: builder.query<PaginatedResponse<MediaFile>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/files", params }),
       providesTags: ["Media"],
     }),
@@ -475,19 +477,19 @@ export const baseApi = createApi({
       query: () => ({ url: "/system/cache/flush", method: "POST" }),
       invalidatesTags: ["Settings"],
     }),
-    getValidationLogs: builder.query<PaginatedResponse<Record<string, unknown>>, Record<string, string | number | boolean> | void>({
+  getValidationLogs: builder.query<PaginatedResponse<Record<string, unknown>>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/logs/validation", params }),
       providesTags: ["Logs"],
     }),
-    getOtpLogs: builder.query<PaginatedResponse<OtpLog>, Record<string, string | number | boolean> | void>({
+  getOtpLogs: builder.query<PaginatedResponse<OtpLog>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/logs/otp", params }),
       providesTags: ["Logs"],
     }),
-    getAuthLogs: builder.query<PaginatedResponse<AuthLog>, Record<string, string | number | boolean> | void>({
+  getAuthLogs: builder.query<PaginatedResponse<AuthLog>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/logs/auth", params }),
       providesTags: ["Logs"],
     }),
-    getAuditLogs: builder.query<PaginatedResponse<AuditLog>, Record<string, string | number | boolean> | void>({
+  getAuditLogs: builder.query<PaginatedResponse<AuditLog>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/logs/audit", params }),
       providesTags: ["Logs"],
     }),
