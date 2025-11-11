@@ -153,7 +153,7 @@ export default function CashbackPage() {
                       {item.user.first_name} {item.user.last_name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Needs {item.missingPoints} pts for {item.user.loyalty.next_level}
+                      Needs {item.missingPoints} pts for {item.user.loyalty?.next_level ?? "next tier"}
                     </p>
                   </div>
                 ))

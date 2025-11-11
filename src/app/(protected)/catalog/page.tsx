@@ -23,8 +23,8 @@ import { toast } from "sonner";
 const categorySchema = z.object({ name: z.string().min(2) });
 const productSchema = z.object({
   name: z.string().min(2),
-  price: z.coerce.number().positive(),
-  category_id: z.coerce.number(),
+  price: z.number().positive(),
+  category_id: z.number(),
 });
 
 type CategoryValues = z.infer<typeof categorySchema>;
@@ -40,8 +40,12 @@ export default function CatalogPage() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const categoryForm = useForm<CategoryValues>({ resolver: zodResolver(categorySchema) });
-  const productForm = useForm<ProductValues>({ resolver: zodResolver(productSchema) });
+  const categoryForm = useForm<CategoryValues>({ resolver: zodResolver(categorySchema), mode: "onChange" });
+  const productForm = useForm<ProductValues>({ 
+    resolver: zodResolver(productSchema),
+    mode: "onChange",
+    defaultValues: { name: "", price: 0, category_id: 0 }
+  });
 
   useEffect(() => {
     if (editingCategory) {

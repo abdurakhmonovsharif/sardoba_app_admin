@@ -25,7 +25,7 @@ const schema = z.object({
   description: z.string().min(5),
   starts_at: z.string().optional(),
   ends_at: z.string().optional(),
-  priority: z.enum(["low", "normal", "high"]).default("normal"),
+  priority: z.enum(["low", "normal", "high"]),
 });
 
 type NewsValues = z.infer<typeof schema>;

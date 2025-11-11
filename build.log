@@ -1,0 +1,26 @@
+
+> sardoba_app_admin@0.1.0 build
+> next build
+
+   ▲ Next.js 16.0.1 (Turbopack)
+   - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 6.3s
+   Running TypeScript ...
+Failed to compile.
+
+./src/app/(protected)/catalog/page.tsx:44:48
+Type error: Type 'Resolver<{ name: string; price: unknown; category_id: unknown; }, any, { name: string; price: number; category_id: number; }>' is not assignable to type 'Resolver<{ name: string; price: number; category_id: number; }, any, { name: string; price: number; category_id: number; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ name: string; price: number; category_id: number; }>' is not assignable to type 'ResolverOptions<{ name: string; price: unknown; category_id: unknown; }>'.
+      Type 'unknown' is not assignable to type 'number'.
+
+[0m [90m 42 |[39m
+ [90m 43 |[39m   [36mconst[39m categoryForm [33m=[39m useForm[33m<[39m[33mCategoryValues[39m[33m>[39m({ resolver[33m:[39m zodResolver(categorySchema) })[33m;[39m
+[31m[1m>[22m[39m[90m 44 |[39m   [36mconst[39m productForm [33m=[39m useForm[33m<[39m[33mProductValues[39m[33m>[39m({ resolver[33m:[39m zodResolver(productSchema) })[33m;[39m
+ [90m    |[39m                                                [31m[1m^[22m[39m
+ [90m 45 |[39m
+ [90m 46 |[39m   useEffect(() [33m=>[39m {
+ [90m 47 |[39m     [36mif[39m (editingCategory) {[0m
+Next.js build worker exited with code: 1 and signal: null

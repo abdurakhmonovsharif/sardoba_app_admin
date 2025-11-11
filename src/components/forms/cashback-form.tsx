@@ -10,8 +10,8 @@ import { useIssueCashbackMutation } from "@/services/base-api";
 import { toast } from "sonner";
 
 const schema = z.object({
-  user_id: z.coerce.number().min(1),
-  amount: z.coerce.number().positive("Amount must be positive"),
+  user_id: z.number().min(1),
+  amount: z.number().positive("Amount must be positive"),
   description: z.string().optional(),
 });
 
@@ -41,12 +41,12 @@ export function CashbackForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <label className="text-sm font-medium">User ID</label>
-        <Input type="number" placeholder="123" {...register("user_id")}/>
+        <Input type="number" placeholder="123" {...register("user_id", { valueAsNumber: true })}/>
         {errors.user_id && <p className="text-xs text-destructive">{errors.user_id.message}</p>}
       </div>
       <div>
         <label className="text-sm font-medium">Amount</label>
-        <Input type="number" placeholder="50000" {...register("amount")}/>
+        <Input type="number" placeholder="50000" {...register("amount", { valueAsNumber: true })}/>
         {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
       </div>
       <div>

@@ -71,7 +71,7 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
           first_name: values.first_name,
           last_name: values.last_name,
           dob: values.dob,
-          waiter_id: values.waiter_id ? Number(values.waiter_id) : null,
+          waiter_id: values.waiter_id ? Number(values.waiter_id) : undefined,
         },
       }).unwrap();
       toast.success("Profile updated");
@@ -256,7 +256,7 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
                       <p className="font-medium">{otp.status.toUpperCase()}</p>
                       <p className="text-xs text-muted-foreground">{formatDate(otp.created_at)}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">{otp.metadata?.channel ?? "SMS"}</span>
+                    <span className="text-xs text-muted-foreground">{typeof otp.metadata?.channel === "string" ? otp.metadata.channel : "SMS"}</span>
                   </div>
                 ))
               ) : (
