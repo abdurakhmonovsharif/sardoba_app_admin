@@ -25,6 +25,7 @@ import type {
   FileUploadResponse,
   LeaderboardRow,
   LoyaltyAnalytics,
+  LoyaltySummary,
   MediaFile,
   NewsItem,
   NotificationDraft,
@@ -33,6 +34,10 @@ import type {
   PaginatedResponse,
   Product,
   StaffMember,
+  StaffRole,
+  StaffListResponse,
+  WaiterCreatePayload,
+  WaiterUpdatePayload,
   SystemHealth,
   SystemSetting,
   Transaction,
@@ -55,17 +60,93 @@ interface BackendUserListItem {
   phone: string;
   waiter_id?: number;
   date_of_birth?: string;
+  created_at?: string;
+  first_name?: string;
+  last_name?: string;
   profile_photo_url?: string;
   cashback_balance?: number;
   level?: string;
 }
 
+interface BackendLoyalty
+  extends Partial<
+    Record<
+      | "level"
+      | "current_level"
+      | "current_level_points"
+      | "current_level_min_points"
+      | "next_level"
+      | "next_level_req_points"
+      | "next_level_req_level"
+      | "points_to_next_level"
+      | "next_level_cashback_percent"
+      | "next_level_progress"
+      | "cashback_balance",
+      number | string
+    >
+  > {}
+
+interface BackendUserDetail extends BackendUserListItem {
+  email?: string | null;
+  gender?: string | null;
+  surname?: string | null;
+  middleName?: string | null;
+  is_deleted?: boolean;
+  updated_at?: string;
+  waiter?: StaffMember;
+  loyalty?: BackendLoyalty;
+  transactions?: Array<
+    BackendUserListItem & {
+      id: number;
+      amount: number;
+      description?: string;
+      user_id?: number;
+      branch?: string | null;
+      source?: string | null;
+      staff_id?: number | null;
+      staff?: StaffMember | null;
+      balance_before?: number | null;
+      balance_after?: number | null;
+    }
+  >;
+  files?: MediaFile[];
+}
+
+interface BackendProduct {
+  id: number;
+  name: string;
+  price: number;
+  category_id?: number;
+  category?: Category;
+  is_active?: boolean;
+  image_url?: string | null;
+}
+
+const toAbsoluteUrl = (path?: string | null) => {
+  if (!path) return path ?? undefined;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const base = process.env.NEXT_PUBLIC_API_URL;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  if (base) {
+    try {
+      // new URL keeps host from base and respects leading slash in path (avoids double /api/v1/api/v1)
+      return new URL(normalizedPath, base).toString();
+    } catch (error) {
+      console.warn("Failed to build absolute URL", error);
+    }
+  }
+
+  return normalizedPath;
+};
+
 const mapUserFromList = (item: BackendUserListItem): User => {
-  const [first_name = item.name, last_name = ""] = item.name?.split(" ") ?? [item.name, ""];
+  const [first_from_name = item.name, last_from_name = ""] = item.name?.split(" ") ?? [item.name, ""];
   return {
     id: item.id,
-    first_name,
-    last_name,
+    first_name: item.first_name ?? first_from_name,
+    last_name: item.last_name ?? last_from_name,
     name: item.name,
     phone: item.phone,
     waiter_id: item.waiter_id,
@@ -78,7 +159,7 @@ const mapUserFromList = (item: BackendUserListItem): User => {
         }
       : undefined,
     date_of_birth: item.date_of_birth,
-    profile_photo_url: item.profile_photo_url,
+    profile_photo_url: toAbsoluteUrl(item.profile_photo_url),
     cashback_balance: item.cashback_balance,
     level: item.level,
     loyalty: {
@@ -89,13 +170,105 @@ const mapUserFromList = (item: BackendUserListItem): User => {
       progress_percent: undefined,
     },
     is_active: true,
-    created_at: item.date_of_birth ?? new Date().toISOString(),
+    created_at: item.created_at,
   };
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const mapLoyalty = (item: BackendUserDetail): LoyaltySummary => {
+  const source = item.loyalty ?? null;
+  const currentPoints =
+    (typeof source?.current_level_points === "number" ? source.current_level_points : undefined) ??
+    (typeof source?.cashback_balance === "number" ? source.cashback_balance : undefined) ??
+    item.cashback_balance ??
+    0;
+
+  const nextLevelThreshold =
+    (typeof source?.points_to_next_level === "number" ? source.points_to_next_level : undefined) ??
+    (typeof source?.next_level_req_points === "number" ? source.next_level_req_points : undefined);
+
+  return {
+    current_points: currentPoints,
+    current_level:
+      (typeof source?.level === "string" ? source.level : undefined) ??
+      (typeof source?.current_level === "string" ? source.current_level : undefined) ??
+      item.level ??
+      "—",
+    next_level:
+      (typeof source?.next_level_req_level === "string" ? source.next_level_req_level : undefined) ??
+      (typeof source?.next_level === "string" ? source.next_level : undefined),
+    next_level_threshold: nextLevelThreshold,
+    next_level_cashback_percent:
+      typeof source?.next_level_cashback_percent === "number" ? source.next_level_cashback_percent : undefined,
+    progress_percent: typeof source?.next_level_progress === "number" ? source.next_level_progress : undefined,
+  };
+};
+
+const mapUserFromDetail = (item: BackendUserDetail): User => {
+  const [first_from_name = item.name, ...rest] = item.name?.split(" ") ?? [item.name];
+  const last_from_name = rest.join(" ");
+
+  return {
+    ...mapUserFromList(item),
+    first_name: item.first_name ?? first_from_name,
+    last_name: item.last_name ?? last_from_name,
+    waiter: normalizeStaffMember(item.waiter) ?? undefined,
+    email: item.email ?? null,
+    gender: item.gender ?? null,
+    surname: item.surname ?? null,
+    middleName: item.middleName ?? null,
+    is_deleted: item.is_deleted ?? false,
+    updated_at: item.updated_at,
+    profile_photo_url: toAbsoluteUrl(item.profile_photo_url),
+    loyalty: mapLoyalty(item),
+    transactions:
+      item.transactions?.map((tx) => ({
+        id: tx.id,
+        amount: tx.amount,
+        description: tx.description ?? "Cashback",
+        created_at: tx.created_at ?? new Date().toISOString(),
+        branch: tx.branch ?? undefined,
+        source: tx.source ?? undefined,
+        staff: tx.staff ? normalizeStaffMember(tx.staff) ?? undefined : undefined,
+        staff_id: tx.staff_id ?? undefined,
+        balance_before: tx.balance_before ?? undefined,
+        balance_after: tx.balance_after ?? undefined,
+      })) ?? [],
+    files: item.files?.map((file) => ({
+      ...file,
+      url: toAbsoluteUrl(file.url) ?? file.url,
+    })),
+  };
+};
+
+const mapProduct = (item: BackendProduct): Product => ({
+  id: item.id,
+  name: item.name,
+  price: item.price,
+  category:
+    item.category ??
+    ({
+      id: item.category_id ?? 0,
+      name: `Category #${item.category_id ?? "—"}`,
+      is_active: true,
+      image_url: undefined,
+    } satisfies Category),
+  image_url: item.image_url ?? undefined,
+  is_active: item.is_active ?? true,
+});
+
 // Use Next.js API proxy to bypass CORS issues when communicating with backend
 const PROXY_BASE_URL = "/api/proxy";
+
+const normalizeRole = (role?: string): StaffRole => {
+  const normalized = role?.toLowerCase();
+  if (normalized === "manager") return "manager";
+  return "waiter";
+};
+
+const normalizeStaffMember = (staff?: StaffMember | null): StaffMember | null => {
+  if (!staff) return null;
+  return { ...staff, role: normalizeRole(staff.role as string) };
+};
 
 const normalizeAuthPayload = (
   payload: unknown,
@@ -109,7 +282,7 @@ const normalizeAuthPayload = (
     return {
       token: tokens.access_token,
       refresh: tokens.refresh_token,
-      staff: (source.staff as StaffMember) ?? fallbackStaff ?? null,
+      staff: normalizeStaffMember((source.staff as StaffMember) ?? fallbackStaff ?? null),
     };
   }
 
@@ -117,7 +290,7 @@ const normalizeAuthPayload = (
     return {
       token: source.access as string,
       refresh: source.refresh as string,
-      staff: (source.staff as StaffMember) ?? fallbackStaff ?? null,
+      staff: normalizeStaffMember((source.staff as StaffMember) ?? fallbackStaff ?? null),
     };
   }
 
@@ -125,7 +298,7 @@ const normalizeAuthPayload = (
     return {
       token: source.access_token as string,
       refresh: source.refresh_token as string,
-      staff: fallbackStaff ?? null,
+      staff: normalizeStaffMember(fallbackStaff ?? null),
     };
   }
   return null;
@@ -150,7 +323,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   extraOptions,
 ) => {
   const result = await rawBaseQuery(args, api, extraOptions);
-  if (result.error?.status === 401) {
+  if (result.error?.status === 401 || result.error?.status === 403) {
     const refresh = (api.getState() as RootState)?.auth?.refresh;
     if (!refresh) {
       api.dispatch(logout());
@@ -159,7 +332,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 
     const refreshResult = await rawBaseQuery(
       {
-        url: "/auth/staff/refresh",
+        url: "/auth/refresh",
         method: "POST",
         body: { refresh, refresh_token: refresh },
       },
@@ -256,6 +429,7 @@ export const baseApi = createApi({
     }),
     getUserById: builder.query<User, number>({
       query: (id) => ({ url: `/users/${id}` }),
+      transformResponse: (response: BackendUserDetail) => mapUserFromDetail(response),
       providesTags: (_result, _error, id) => [{ type: "Users", id }],
     }),
     updateUser: builder.mutation<User, { id: number; body: Partial<User> }>({
@@ -328,6 +502,23 @@ export const baseApi = createApi({
       query: () => ({ url: "/auth/staff" }),
       providesTags: ["Staff"],
     }),
+    getWaiters: builder.query<PaginatedResponse<StaffMember>, { search?: string; page?: number; size?: number } | undefined>({
+      query: (params) => ({
+        url: "/waiters",
+        params,
+      }),
+      transformResponse: (response: StaffListResponse) => ({
+        data: response.items,
+        total: response.pagination.total,
+        page: response.pagination.page,
+        page_size: response.pagination.size,
+      }),
+      providesTags: ["Staff"],
+    }),
+    getWaiterById: builder.query<StaffMember, number>({
+      query: (id) => ({ url: `/waiters/${id}` }),
+      providesTags: (_result, _error, id) => [{ type: "Staff", id }],
+    }),
     createStaff: builder.mutation<StaffMember, Partial<StaffMember>>({
       query: (body) => ({
         url: "/auth/staff",
@@ -355,11 +546,43 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["Staff"],
     }),
-  getNews: builder.query<PaginatedResponse<NewsItem>, Record<string, string | number | boolean> | undefined>({
+    createWaiter: builder.mutation<StaffMember, WaiterCreatePayload>({
+      query: (body) => ({
+        url: "/waiters",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Staff"],
+    }),
+    updateWaiter: builder.mutation<StaffMember, { id: number; body: WaiterUpdatePayload }>({
+      query: ({ id, body }) => ({
+        url: `/waiters/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Staff", id }, "Staff"],
+    }),
+    deleteWaiter: builder.mutation<void, number>({
+      query: (id) => ({ url: `/waiters/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Staff"],
+    }),
+    getNews: builder.query<PaginatedResponse<NewsItem>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/news",
         params,
       }),
+      transformResponse: (response: PaginatedResponse<NewsItem> | NewsItem[]) => {
+        if (Array.isArray(response)) {
+          const data = response;
+          return {
+            data,
+            total: data.length,
+            page: 1,
+            page_size: data.length,
+          };
+        }
+        return response;
+      },
       providesTags: ["News"],
     }),
     saveNews: builder.mutation<NewsItem, Partial<NewsItem>>({
@@ -374,13 +597,20 @@ export const baseApi = createApi({
       query: (id) => ({ url: `/news/${id}`, method: "DELETE" }),
       invalidatesTags: ["News"],
     }),
-    uploadNewsAsset: builder.mutation<FileUploadResponse, FormData>({
+    uploadNewsImage: builder.mutation<FileUploadResponse, FormData>({
       query: (body) => ({
-        url: "/files/news",
+        url: "/files/news_images",
         method: "POST",
         body,
       }),
       invalidatesTags: ["News", "Media"],
+    }),
+    deleteNewsImage: builder.mutation<void, string>({
+      query: (fileName) => ({
+        url: `/files/news_images/${encodeURIComponent(fileName)}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["News"],
     }),
   getNotifications: builder.query<PaginatedResponse<NotificationItem>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
@@ -408,6 +638,10 @@ export const baseApi = createApi({
       },
       invalidatesTags: ["Notifications"],
     }),
+    deleteNotification: builder.mutation<void, number>({
+      query: (id) => ({ url: `/notifications/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Notifications"],
+    }),
     getCategories: builder.query<Category[], void>({
       query: () => ({ url: "/catalog/categories" }),
       providesTags: ["Catalog"],
@@ -425,6 +659,33 @@ export const baseApi = createApi({
         url: "/catalog/products",
         params,
       }),
+      transformResponse: (response: PaginatedResponse<Product> | BackendProduct[] | BackendPagination<BackendProduct>) => {
+        if (Array.isArray(response)) {
+          const data = response.map(mapProduct);
+          return {
+            data,
+            total: data.length,
+            page: 1,
+            page_size: data.length,
+          };
+        }
+
+        if ("items" in response && response.items && "pagination" in response) {
+          const typed = response as BackendPagination<BackendProduct>;
+          return {
+            data: typed.items.map(mapProduct),
+            total: typed.pagination.total,
+            page: typed.pagination.page,
+            page_size: typed.pagination.size,
+          };
+        }
+
+        const paginated = response as PaginatedResponse<BackendProduct>;
+        return {
+          ...paginated,
+          data: paginated.data.map(mapProduct),
+        };
+      },
       providesTags: ["Catalog"],
     }),
     saveProduct: builder.mutation<Product, Partial<Product>>({
@@ -449,6 +710,13 @@ export const baseApi = createApi({
     }),
     getWaiterStats: builder.query<WaiterStat[], void>({
       query: () => ({ url: "/cashback/waiter-stats" }),
+      transformResponse: (response: WaiterStat[]) =>
+        response.map((item) => ({
+          ...item,
+          clients_count: (item as WaiterStat & { clients_count?: number }).clients_count ?? item.transactions ?? 0,
+          total_cashback: (item as WaiterStat & { total_cashback?: number }).total_cashback ?? 0,
+          transactions: item.transactions ?? 0,
+        })),
       providesTags: ["Stats"],
     }),
     getTopUsers: builder.query<LeaderboardRow[], void>({
@@ -526,12 +794,19 @@ export const {
   useUpdateStaffMutation,
   useDeleteStaffMutation,
   useRegenerateReferralCodeMutation,
+  useGetWaitersQuery,
+  useGetWaiterByIdQuery,
+  useCreateWaiterMutation,
+  useUpdateWaiterMutation,
+  useDeleteWaiterMutation,
   useGetNewsQuery,
   useSaveNewsMutation,
   useDeleteNewsMutation,
-  useUploadNewsAssetMutation,
+  useUploadNewsImageMutation,
+  useDeleteNewsImageMutation,
   useGetNotificationsQuery,
   useSaveNotificationMutation,
+  useDeleteNotificationMutation,
   useGetCategoriesQuery,
   useSaveCategoryMutation,
   useGetProductsQuery,

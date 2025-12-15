@@ -14,7 +14,7 @@ export function Sidebar() {
     <aside className="hidden w-72 flex-col border-r border-border/60 bg-white px-5 py-6 shadow-sm lg:flex">
       <div className="mb-8">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Sardoba Admin</p>
-        <h1 className="text-2xl font-semibold">Control Center</h1>
+        <h1 className="text-2xl font-semibold">Центр управления</h1>
         {process.env.NEXT_PUBLIC_ENV_LABEL && (
           <span className="mt-2 inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
             {process.env.NEXT_PUBLIC_ENV_LABEL}
@@ -43,7 +43,7 @@ export function Sidebar() {
       </nav>
       {staff && (
         <div className="mt-6 rounded-2xl border border-border/70 bg-muted/50 p-4 text-sm">
-          <p className="text-xs text-muted-foreground">Signed in as</p>
+          <p className="text-xs text-muted-foreground">Вы вошли как</p>
           <p className="font-semibold">{staff.name}</p>
           <p className="text-xs capitalize text-muted-foreground">{staff.role}</p>
         </div>

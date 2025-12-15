@@ -27,7 +27,7 @@ export default function AuditPage() {
             items={authLogs.data?.data?.map((log) => ({
               id: log.id,
               title: log.event,
-              subtitle: `Actor ${log.actor_type} #${log.actor_id}`,
+              subtitle: `Субъект ${log.actor_type} #${log.actor_id}`,
               timestamp: log.created_at,
             }))}
           />
@@ -49,7 +49,7 @@ export default function AuditPage() {
             items={validationLogs.data?.data?.map((log, index) => ({
               id: index,
               title: JSON.stringify(log),
-              subtitle: "Validation error",
+              subtitle: "Ошибка валидации",
               timestamp: new Date().toISOString(),
             }))}
           />
@@ -72,20 +72,20 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Audit & monitoring" description="Trace auth logs, OTP floods, validation errors" />
+      <SectionHeader title="Аудит и мониторинг" description="Логи авторизаций, OTP и валидационные ошибки" />
       <Card>
         <CardHeader>
-          <CardTitle>Logs</CardTitle>
-          <CardDescription>Live data from AuthLog and audit tables</CardDescription>
+          <CardTitle>Логи</CardTitle>
+          <CardDescription>Онлайн данные из таблиц аудита</CardDescription>
         </CardHeader>
         <div className="p-6 pt-0">
           <Tabs defaultValue="auth" value={tab} onValueChange={setTab}>
             <TabsList className="mb-4">
               {[
-                { value: "auth", label: "Auth" },
+                { value: "auth", label: "Авторизация" },
                 { value: "otp", label: "OTP" },
-                { value: "validation", label: "Validation" },
-                { value: "audit", label: "Admin actions" },
+                { value: "validation", label: "Валидация" },
+                { value: "audit", label: "Действия админов" },
               ].map((item) => (
                 <TabsTrigger key={item.value} value={item.value}>
                   {item.label}
@@ -101,7 +101,7 @@ export default function AuditPage() {
 }
 
 function LogList({ items }: { items?: { id: number | string; title: string; subtitle?: string; timestamp: string }[] }) {
-  if (!items?.length) return <p className="text-sm text-muted-foreground">No entries</p>;
+  if (!items?.length) return <p className="text-sm text-muted-foreground">Нет записей</p>;
   return (
     <ul className="space-y-3">
       {items.map((item) => (

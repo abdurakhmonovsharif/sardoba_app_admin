@@ -59,69 +59,69 @@ export default function StaffPage() {
     try {
       if (editing) {
         await updateStaff({ id: editing.id, body: values }).unwrap();
-        toast.success("Staff updated");
+        toast.success("Сотрудник обновлён");
       } else {
         await createStaff(values).unwrap();
-        toast.success("Staff created");
+        toast.success("Сотрудник создан");
       }
       setEditing(null);
       form.reset();
     } catch (error) {
       console.error(error);
-      toast.error("Operation failed");
+      toast.error("Не удалось выполнить операцию");
     }
   });
 
   const handleDelete = async (id: number) => {
     try {
       await deleteStaff(id).unwrap();
-      toast.success("Staff removed");
+      toast.success("Сотрудник удалён");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete");
+      toast.error("Не удалось удалить");
     }
   };
 
   const handleRegenerate = async (id: number) => {
     try {
       await regenerateCode(id).unwrap();
-      toast.success("Referral regenerated");
+      toast.success("Реферальный код обновлён");
     } catch (error) {
       console.error(error);
-      toast.error("Unable to regenerate referral");
+      toast.error("Не удалось обновить реферальный код");
     }
   };
 
   const columns: ColumnDef<StaffMember>[] = [
-    { header: "Name", accessorKey: "name" },
-    { header: "Phone", accessorKey: "phone" },
+    { header: "Имя", accessorKey: "name" },
+    { header: "Телефон", accessorKey: "phone" },
     {
-      header: "Role",
+      header: "Роль",
       cell: ({ row }) => <Badge>{row.original.role}</Badge>,
     },
-    { header: "Branch", accessorKey: "branch" },
+    { header: "Филиал", accessorKey: "branch" },
     {
-      header: "Referral",
+      header: "Реферальный код",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <span className="text-sm font-mono">{row.original.referral_code ?? "—"}</span>
           {row.original.role === "waiter" && (
             <Button variant="outline" size="sm" onClick={() => handleRegenerate(row.original.id)}>
-              Regenerate
+              Обновить
             </Button>
           )}
         </div>
       ),
     },
     {
-      header: "Actions",
+      header: "Действия",
       cell: ({ row }) => (
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setEditing(row.original)}>
-            Edit
+            Редактировать
           </Button>
           <Button variant="destructive" size="sm" onClick={() => handleDelete(row.original.id)}>
-            Delete
+            Удалить
           </Button>
         </div>
       ),
@@ -129,42 +129,42 @@ export default function StaffPage() {
   ];
 
   return (
-    <RoleGate minRole="manager" fallback={<p className="text-sm text-muted-foreground">Manager access only</p>}>
+    <RoleGate minRole="manager" fallback={<p className="text-sm text-muted-foreground">Доступ только для менеджера</p>}>
       <div className="space-y-6">
-        <SectionHeader title="Staff management" description="Control waiter and manager access" />
+        <SectionHeader title="Управление персоналом" description="Контроль доступа официантов и менеджеров" />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>{editing ? "Update staff" : "Create staff"}</CardTitle>
-              <CardDescription>/auth/staff endpoints</CardDescription>
+              <CardTitle>{editing ? "Редактировать сотрудника" : "Создать сотрудника"}</CardTitle>
+              <CardDescription>Эндпоинты /auth/staff</CardDescription>
             </CardHeader>
             <form onSubmit={onSubmit} className="space-y-4 p-6 pt-0">
               <div>
-                <label className="text-xs uppercase text-muted-foreground">Name</label>
+                <label className="text-xs uppercase text-muted-foreground">Имя</label>
                 <Input {...form.register("name")} />
               </div>
               <div>
-                <label className="text-xs uppercase text-muted-foreground">Phone</label>
+                <label className="text-xs uppercase text-muted-foreground">Телефон</label>
                 <Input {...form.register("phone")} />
               </div>
               <div>
-                <label className="text-xs uppercase text-muted-foreground">Role</label>
+                <label className="text-xs uppercase text-muted-foreground">Роль</label>
                 <Select {...form.register("role")}>
-                  <option value="waiter">Waiter</option>
-                  <option value="manager">Manager</option>
+                  <option value="waiter">Официант</option>
+                  <option value="manager">Менеджер</option>
                 </Select>
               </div>
               <div>
-                <label className="text-xs uppercase text-muted-foreground">Branch</label>
+                <label className="text-xs uppercase text-muted-foreground">Филиал</label>
                 <Input {...form.register("branch")} />
               </div>
               <Button type="submit" isLoading={editing ? isUpdating : isCreating}>
-                {editing ? "Save changes" : "Create staff"}
+                {editing ? "Сохранить" : "Создать"}
               </Button>
               {editing && (
                 <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
-                  Cancel
+                  Отмена
                 </Button>
               )}
             </form>
@@ -172,8 +172,8 @@ export default function StaffPage() {
 
           <Card className="lg:row-span-2">
             <CardHeader>
-              <CardTitle>Team directory</CardTitle>
-              <CardDescription>Waiter referral codes and login roles</CardDescription>
+              <CardTitle>Список сотрудников</CardTitle>
+              <CardDescription>Роли и реферальные коды официантов</CardDescription>
             </CardHeader>
             <div className="p-6 pt-0">
               <DataTable columns={columns} data={staff ?? []} total={staff?.length} page={1} pageSize={staff?.length ?? 10} />

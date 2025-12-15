@@ -1,186 +1,227 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { SectionHeader } from "@/components/common/section-header";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/tables/data-table";
 import {
   useGetCategoriesQuery,
-  useSaveCategoryMutation,
   useGetProductsQuery,
-  useSaveProductMutation,
   useSyncMenuMutation,
 } from "@/services/base-api";
-import type { Category, Product } from "@/types";
+import type { Product } from "@/types";
 import { toast } from "sonner";
-
-const categorySchema = z.object({ name: z.string().min(2) });
-const productSchema = z.object({
-  name: z.string().min(2),
-  price: z.number().positive(),
-  category_id: z.number(),
-});
-
-type CategoryValues = z.infer<typeof categorySchema>;
-type ProductValues = z.infer<typeof productSchema>;
+import { Select } from "@/components/ui/select";
 
 export default function CatalogPage() {
   const [productPage, setProductPage] = useState(1);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(13);
   const { data: categories } = useGetCategoriesQuery();
-  const { data: products } = useGetProductsQuery({ page: productPage, page_size: 10 });
-  const [saveCategory, { isLoading: savingCategory }] = useSaveCategoryMutation();
-  const [saveProduct, { isLoading: savingProduct }] = useSaveProductMutation();
-  const [syncMenu, { isLoading: syncingMenu }] = useSyncMenuMutation();
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-
-  const categoryForm = useForm<CategoryValues>({ resolver: zodResolver(categorySchema), mode: "onChange" });
-  const productForm = useForm<ProductValues>({ 
-    resolver: zodResolver(productSchema),
-    mode: "onChange",
-    defaultValues: { name: "", price: 0, category_id: 0 }
-  });
-
-  useEffect(() => {
-    if (editingCategory) {
-      categoryForm.reset({ name: editingCategory.name });
-    } else {
-      categoryForm.reset({ name: "" });
-    }
-  }, [editingCategory, categoryForm]);
-
-  useEffect(() => {
-    if (editingProduct) {
-      productForm.reset({
-        name: editingProduct.name,
-        price: editingProduct.price,
-        category_id: editingProduct.category.id,
-      });
-    } else {
-      productForm.reset({ name: "", price: 0, category_id: categories?.[0]?.id ?? 0 });
-    }
-  }, [editingProduct, categories, productForm]);
-
-  const handleCategorySubmit = categoryForm.handleSubmit(async (values) => {
-    try {
-      await saveCategory({ id: editingCategory?.id, name: values.name }).unwrap();
-      toast.success("Category saved");
-      setEditingCategory(null);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to save category");
-    }
-  });
-
-  const handleProductSubmit = productForm.handleSubmit(async (values) => {
-    try {
-      await saveProduct({ id: editingProduct?.id, ...values }).unwrap();
-      toast.success("Product saved");
-      setEditingProduct(null);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to save product");
-    }
-  });
-
-  const handleSync = async () => {
-    try {
-      await syncMenu().unwrap();
-      toast.success("Menu sync triggered");
-    } catch (error) {
-      console.error(error);
-      toast.error("Unable to sync catalog");
-    }
+  const productParams: Record<string, string | number | boolean> = {
+    page: productPage,
+    page_size: 25,
+    ...(selectedCategoryId ? { category_id: selectedCategoryId } : {}),
   };
+  const { data: products } = useGetProductsQuery(productParams);
+  const [syncMenu, { isLoading: syncingMenu }] = useSyncMenuMutation();
+  const selectedCategory = categories?.find((c) => c.id === selectedCategoryId);
+  const totalPages = Math.max(1, Math.ceil((products?.total ?? 0) / (products?.page_size ?? 25)));
 
   const productColumns: ColumnDef<Product>[] = [
-    { header: "Product", accessorKey: "name" },
-    { header: "Category", cell: ({ row }) => row.original.category.name },
-    { header: "Price", cell: ({ row }) => `${row.original.price.toLocaleString()} UZS` },
     {
-      header: "Status",
-      cell: ({ row }) => (row.original.is_active ? "Active" : "Hidden"),
-    },
-    {
-      header: "Actions",
+      header: "Товар",
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" onClick={() => setEditingProduct(row.original)}>
-          Edit
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 overflow-hidden rounded-md border border-border/60 bg-muted/40">
+            {row.original.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={row.original.image_url} alt={row.original.name} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-[11px] text-muted-foreground">Нет фото</div>
+            )}
+          </div>
+          <div>
+            <p className="font-semibold">{row.original.name}</p>
+            <p className="text-xs text-muted-foreground">ID: {row.original.id}</p>
+          </div>
+        </div>
       ),
+    },
+    { header: "Категория", cell: ({ row }) => row.original.category.name },
+    { header: "Цена", cell: ({ row }) => `${row.original.price.toLocaleString()} UZS` },
+    {
+      header: "Статус",
+      cell: ({ row }) => (row.original.is_active ? "Активен" : "Скрыт"),
     },
   ];
 
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Catalog" description="Menu sync and local overrides" />
+    <div className="space-y-6 px-2 pb-6 md:px-0">
+      <SectionHeader
+        title="Каталог"
+        description="Только просмотр. Управление через Ikko."
+        action={
+          <Button
+            onClick={async () => {
+              try {
+                await syncMenu().unwrap();
+                toast.success("Синхронизация запущена");
+              } catch (error) {
+                console.error(error);
+                toast.error("Не удалось запустить синхронизацию");
+              }
+            }}
+            isLoading={syncingMenu}
+            variant="outline"
+          >
+            Синхронизировать с Ikko
+          </Button>
+        }
+      />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingCategory ? "Update category" : "Create category"}</CardTitle>
-            <CardDescription>app/core/storage integration</CardDescription>
-          </CardHeader>
-          <form onSubmit={handleCategorySubmit} className="space-y-3 p-6 pt-0">
-            <Input placeholder="Desserts" {...categoryForm.register("name")} />
-            <Button type="submit" isLoading={savingCategory}>
-              {editingCategory ? "Save" : "Create"}
-            </Button>
-            {editingCategory && (
-              <Button variant="ghost" type="button" onClick={() => setEditingCategory(null)}>
-                Cancel
-              </Button>
-            )}
-          </form>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{editingProduct ? "Update product" : "Create product"}</CardTitle>
-            <CardDescription>Images upload through /files</CardDescription>
-          </CardHeader>
-          <form onSubmit={handleProductSubmit} className="space-y-4 p-6 pt-0">
-            <Input placeholder="Latte" {...productForm.register("name")} />
-            <Input type="number" placeholder="20000" {...productForm.register("price", { valueAsNumber: true })} />
-            <select className="w-full rounded-lg border border-input px-3 py-2" {...productForm.register("category_id", { valueAsNumber: true })}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Категории</CardTitle>
+          <CardDescription>Синхронизированы с Ikko; только чтение</CardDescription>
+        </CardHeader>
+        <div className="gap-3 p-6 pt-0 md:hidden">
+          <p className="text-sm text-muted-foreground">Выберите категорию</p>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 overflow-hidden rounded-md border border-border/60 bg-muted/40">
+              {selectedCategory?.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={selectedCategory.image_url} alt={selectedCategory.name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[11px] text-muted-foreground">Нет фото</div>
+              )}
+            </div>
+            <Select
+              value={selectedCategoryId?.toString() ?? ""}
+              onChange={(e) => {
+                const val = e.target.value ? Number(e.target.value) : null;
+                setSelectedCategoryId(val);
+                setProductPage(1);
+              }}
+            >
+              <option value="">Все категории</option>
               {categories?.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
               ))}
-            </select>
-            <div className="flex items-center gap-3">
-              <Button type="submit" isLoading={savingProduct}>
-                {editingProduct ? "Save product" : "Create product"}
-              </Button>
-              <Button type="button" variant="outline" onClick={handleSync} isLoading={syncingMenu}>
-                Sync from Ikko
-              </Button>
-            </div>
-          </form>
-        </Card>
-      </div>
+            </Select>
+          </div>
+        </div>
+        <div className="hidden gap-2 p-6 pt-0 text-sm md:grid md:grid-cols-2 lg:grid-cols-3">
+          {categories?.length ? (
+            categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => {
+                  setProductPage(1);
+                  setSelectedCategoryId((prev) => (prev === category.id ? null : category.id));
+                }}
+                className={`rounded-lg border px-4 py-3 text-left transition ${
+                  selectedCategoryId === category.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border/70 hover:border-primary/40"
+                }`}
+              >
+                <div className="mb-2 h-10 w-10 overflow-hidden rounded-md border border-border/60 bg-muted/40">
+                  {category.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={category.image_url} alt={category.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[11px] text-muted-foreground">
+                      Нет фото
+                    </div>
+                  )}
+                </div>
+                <p className="font-semibold">{category.name}</p>
+                <p className="text-xs text-muted-foreground">ID категории: {category.id}</p>
+              </button>
+            ))
+          ) : (
+            <p className="text-muted-foreground">Категории недоступны.</p>
+          )}
+        </div>
+      </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Product list</CardTitle>
-          <CardDescription>Manage price, category assignments</CardDescription>
+          <CardTitle>Список товаров</CardTitle>
+          <CardDescription>Только просмотр; изменения в Ikko</CardDescription>
         </CardHeader>
         <div className="p-6 pt-0">
-          <DataTable
-            columns={productColumns}
-            data={products?.data ?? []}
-            total={products?.total}
-            page={products?.page ?? productPage}
-            pageSize={products?.page_size ?? 10}
-            onPageChange={setProductPage}
-          />
+          {selectedCategoryId && (
+            <p className="mb-3 text-sm text-muted-foreground">
+              Фильтр по категории ID {selectedCategoryId}. Выберите другую категорию, чтобы изменить фильтр.
+            </p>
+          )}
+          <div className="hidden md:block">
+            <DataTable
+              columns={productColumns}
+              data={products?.data ?? []}
+              total={products?.total}
+              page={products?.page ?? productPage}
+              pageSize={products?.page_size ?? 25}
+              onPageChange={setProductPage}
+              showSearch={false}
+            />
+          </div>
+
+          <div className="grid gap-3 md:hidden">
+            {(products?.data ?? []).map((product) => (
+              <div key={product.id} className="rounded-2xl border border-border/70 bg-white p-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="h-14 w-14 overflow-hidden rounded-md border border-border/60 bg-muted/40">
+                    {product.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[11px] text-muted-foreground">
+                        Нет фото
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold">{product.name}</p>
+                    <p className="text-xs text-muted-foreground">ID: {product.id}</p>
+                    <p className="text-xs text-muted-foreground">Категория: {product.category.name}</p>
+                  </div>
+                  <span className="text-sm font-semibold">{product.price.toLocaleString()} UZS</span>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Статус: {product.is_active ? "Активен" : "Скрыт"}
+                </div>
+              </div>
+            ))}
+            {!products?.data?.length && <p className="text-sm text-muted-foreground">Нет товаров</p>}
+
+            <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={(products?.page ?? productPage) <= 1}
+                onClick={() => setProductPage((p) => Math.max(1, p - 1))}
+              >
+                Назад
+              </Button>
+              <span>
+                Страница {products?.page ?? productPage} из {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={(products?.page ?? productPage) >= totalPages}
+                onClick={() => setProductPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Далее
+              </Button>
+            </div>
+          </div>
         </div>
       </Card>
     </div>

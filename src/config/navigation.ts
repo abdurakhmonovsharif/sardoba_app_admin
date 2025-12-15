@@ -10,6 +10,7 @@ import {
   Newspaper,
   Settings2,
   Siren,
+  UserCheck,
   Users2,
 } from "lucide-react";
 import type { StaffRole } from "@/types";
@@ -23,15 +24,16 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Users", href: "/users", icon: Users2 },
-  { title: "Cashback & Loyalty", href: "/cashback", icon: ActivitySquare },
-  { title: "Staff", href: "/staff", icon: ListChecks, roles: ["manager"] },
-  { title: "News", href: "/news", icon: Newspaper },
-  { title: "Notifications", href: "/notifications", icon: BellRing },
-  { title: "Catalog", href: "/catalog", icon: FolderArchive },
-  { title: "Media", href: "/media", icon: FilePieChart },
-  { title: "Reports", href: "/reports", icon: Siren },
-  { title: "Settings", href: "/settings", icon: Settings2 },
-  { title: "Audit & Ops", href: "/audit", icon: Cpu, roles: ["manager"] },
+  { title: "Дашборд", href: "/dashboard", icon: LayoutDashboard, roles: ["manager"] },
+  { title: "Клиенты", href: "/users", icon: Users2, roles: ["waiter", "manager"] },
+  { title: "Кэшбэк и лояльность", href: "/cashback", icon: ActivitySquare, roles: ["manager"] },
+  { title: "Персонал", href: "/staff", icon: ListChecks, roles: ["manager"] },
+  { title: "Официанты", href: "/waiters", icon: UserCheck, roles: ["manager"] },
+  { title: "Новости", href: "/news", icon: Newspaper, roles: ["manager"] },
+  { title: "Уведомления", href: "/notifications", icon: BellRing, roles: ["manager"] },
+  { title: "Каталог", href: "/catalog", icon: FolderArchive, roles: ["waiter", "manager"] },
+  { title: "Медиа", href: "/media", icon: FilePieChart, roles: ["manager"] },
+  { title: "Отчёты", href: "/reports", icon: Siren, roles: ["manager"] },
+  { title: "Настройки", href: "/settings", icon: Settings2, roles: ["manager"] },
+  { title: "Аудит и DevOps", href: "/audit", icon: Cpu, roles: ["manager"] },
 ];

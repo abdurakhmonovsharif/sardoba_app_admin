@@ -17,11 +17,40 @@ export interface StaffMember {
   phone: string;
   role: StaffRole;
   branch?: string;
+  branch_id?: number;
   referral_code?: string;
   last_login_at?: string;
   failed_attempts?: number;
   created_at?: string;
   updated_at?: string;
+  clients_count?: number;
+}
+
+export interface StaffPagination {
+  page: number;
+  size: number;
+  total: number;
+}
+
+export interface StaffListResponse {
+  pagination: StaffPagination;
+  items: StaffMember[];
+}
+
+export interface WaiterCreatePayload {
+  name: string;
+  phone: string;
+  password: string;
+  branch_id?: number;
+  referral_code?: string;
+}
+
+export interface WaiterUpdatePayload {
+  name?: string;
+  phone?: string;
+  password?: string;
+  branch_id?: number;
+  referral_code?: string;
 }
 
 export interface AuthState {
@@ -65,6 +94,7 @@ export interface LoyaltySummary {
   next_level?: string;
   next_level_threshold?: number;
   progress_percent?: number;
+  next_level_cashback_percent?: number;
 }
 
 export interface User {
@@ -84,6 +114,14 @@ export interface User {
   is_active?: boolean;
   loyalty?: LoyaltySummary;
   created_at?: string;
+  updated_at?: string;
+  email?: string | null;
+  gender?: string | null;
+  surname?: string | null;
+  middleName?: string | null;
+  is_deleted?: boolean;
+  transactions?: Transaction[];
+  files?: MediaFile[];
 }
 
 export interface Transaction {
@@ -94,6 +132,9 @@ export interface Transaction {
   branch?: string;
   source?: string;
   staff?: StaffMember;
+  balance_before?: number | null;
+  balance_after?: number | null;
+  staff_id?: number | null;
 }
 
 export interface OtpLog {
@@ -129,7 +170,7 @@ export interface NewsItem {
   image_url?: string;
   starts_at?: string;
   ends_at?: string;
-  priority?: "low" | "normal" | "high";
+  priority?: number;
   is_active: boolean;
 }
 
@@ -174,8 +215,9 @@ export interface MediaFile {
 export interface WaiterStat {
   staff_id: number;
   staff_name: string;
-  total_cashback: number;
-  transactions: number;
+  clients_count?: number;
+  transactions?: number;
+  total_cashback?: number;
 }
 
 export interface LeaderboardRow {

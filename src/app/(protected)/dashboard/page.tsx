@@ -26,26 +26,26 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-10">
-      <SectionHeader title="Mission control" description="Monitoring loyalty program performance and infrastructure" />
+      <SectionHeader title="Центр мониторинга" description="Отслеживание программы лояльности и инфраструктуры" />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Registered clients" value={metrics?.totalClients ?? 0} icon={Users2} />
-        <MetricCard title="Active waiters" value={metrics?.activeWaiters ?? 0} icon={ShieldCheck} />
-        <MetricCard title="Cashback issued" value={metrics?.cashbackIssued ?? 0} currency icon={Gift} />
-        <MetricCard title="Avg cashback / user" value={metrics?.avgCashbackPerUser ?? 0} currency icon={Activity} />
+        <MetricCard title="Зарегистрированные клиенты" value={metrics?.totalClients ?? 0} icon={Users2} />
+        <MetricCard title="Активные официанты" value={metrics?.activeWaiters ?? 0} icon={ShieldCheck} />
+        <MetricCard title="Выданный кэшбэк" value={metrics?.cashbackIssued ?? 0} currency icon={Gift} />
+        <MetricCard title="Средний кэшбэк на клиента" value={metrics?.avgCashbackPerUser ?? 0} currency icon={Activity} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Loyalty distribution</CardTitle>
-            <CardDescription>Tier balances pulled from CashbackService.loyalty_analytics()</CardDescription>
+            <CardTitle>Уровни лояльности</CardTitle>
+            <CardDescription>Распределение клиентов по уровням</CardDescription>
           </CardHeader>
           <LoyaltyPieChart data={loyalty} />
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Recent activity</CardTitle>
-            <CardDescription>Auth events, OTP requests, cashback grants</CardDescription>
+            <CardTitle>Последняя активность</CardTitle>
+            <CardDescription>Авторизации, OTP, начисления/списания кэшбэка</CardDescription>
           </CardHeader>
           <div className="p-6 pt-0">
             <ActivityFeed activity={activity} />
@@ -56,8 +56,8 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Platform health</CardTitle>
-            <CardDescription>Redis, Postgres, queues</CardDescription>
+            <CardTitle>Состояние платформы</CardTitle>
+            <CardDescription>Redis, Postgres, очереди</CardDescription>
           </CardHeader>
           <div className="p-6 pt-0">
             <HealthGrid statuses={health} />
@@ -65,8 +65,8 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Latest news</CardTitle>
-            <CardDescription>/news endpoint snapshot</CardDescription>
+            <CardTitle>Новости</CardTitle>
+            <CardDescription>Последние объявления</CardDescription>
           </CardHeader>
           <div className="space-y-4 p-6 pt-0 text-sm">
             {news?.data?.length ? (
@@ -77,10 +77,10 @@ export default function DashboardPage() {
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No news published</p>
+              <p className="text-muted-foreground">Новости отсутствуют</p>
             )}
             <Link href="/news" className="inline-flex h-10 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium">
-              Open newsroom
+              Открыть новости
             </Link>
           </div>
         </Card>
@@ -88,21 +88,21 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Financial snapshot</CardTitle>
-          <CardDescription>Totals pulled from /cashback stats</CardDescription>
+          <CardTitle>Финансовый срез</CardTitle>
+          <CardDescription>Итоги из статистики кэшбэка</CardDescription>
         </CardHeader>
         <div className="grid gap-4 p-6 pt-0 md:grid-cols-3">
           <div>
-            <p className="text-sm text-muted-foreground">Cashback outstanding</p>
+            <p className="text-sm text-muted-foreground">Начисленный кэшбэк</p>
             <p className="text-2xl font-semibold">{formatCurrency(metrics?.cashbackIssued ?? 0)}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">News items live</p>
+            <p className="text-sm text-muted-foreground">Активных новостей</p>
             <p className="text-2xl font-semibold">{metrics?.newsCount ?? 0}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Redis status</p>
-            <p className="text-2xl font-semibold">{metrics?.redisHealthy ? "Healthy" : "Check"}</p>
+            <p className="text-sm text-muted-foreground">Redis</p>
+            <p className="text-2xl font-semibold">{metrics?.redisHealthy ? "OK" : "Проверить"}</p>
           </div>
         </div>
       </Card>

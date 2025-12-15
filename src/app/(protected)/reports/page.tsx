@@ -28,7 +28,7 @@ export default function ReportsPage() {
       link.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error("Export failed");
+      toast.error("Не удалось экспортировать");
     }
   };
 
@@ -42,27 +42,27 @@ export default function ReportsPage() {
       link.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error("Export failed");
+      toast.error("Не удалось экспортировать");
     }
   };
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Reports" description="Staff performance and loyalty leaders" />
+      <SectionHeader title="Отчёты" description="Эффективность персонала и лидеры лояльности" />
 
       <div className="flex flex-wrap gap-3">
         <Button variant="outline" onClick={() => downloadUsers("csv")} isLoading={exportingUsers}>
-          Export users CSV
+          Экспорт клиентов CSV
         </Button>
         <Button variant="outline" onClick={() => downloadCashback("xlsx")} isLoading={exportingTx}>
-          Export cashback XLSX
+          Экспорт кэшбэка XLSX
         </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Waiter leaderboard</CardTitle>
+            <CardTitle>Лидеры официантов</CardTitle>
             <CardDescription>cashback_service.waiter_stats()</CardDescription>
           </CardHeader>
           <div className="space-y-2 p-6 pt-0 text-sm">
@@ -71,19 +71,23 @@ export default function ReportsPage() {
                 <div key={stat.staff_id} className="flex items-center justify-between rounded-xl border border-border/60 p-3">
                   <div>
                     <p className="font-semibold">{stat.staff_name}</p>
-                    <p className="text-xs text-muted-foreground">Transactions: {stat.transactions}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Клиентов: {stat.clients_count ?? stat.transactions ?? 0}
+                    </p>
                   </div>
-                  <span className="font-semibold text-emerald-600">{formatCurrency(stat.total_cashback)}</span>
+                  <span className="font-semibold text-emerald-600">
+                    {formatCurrency(stat.total_cashback ?? 0)}
+                  </span>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No stats yet</p>
+              <p className="text-muted-foreground">Данных нет</p>
             )}
           </div>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Top loyalty users</CardTitle>
+            <CardTitle>Лучшие по лояльности</CardTitle>
             <CardDescription>CashbackService.top_users()</CardDescription>
           </CardHeader>
           <div className="space-y-2 p-6 pt-0 text-sm">
@@ -94,13 +98,13 @@ export default function ReportsPage() {
                     <p className="font-semibold">
                       {row.user.first_name} {row.user.last_name}
                     </p>
-                    <p className="text-xs text-muted-foreground">{row.transactions} tx</p>
+                    <p className="text-xs text-muted-foreground">{row.transactions} транзакций</p>
                   </div>
                   <span className="font-semibold text-primary">{formatCurrency(row.total_cashback)}</span>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No users found</p>
+              <p className="text-muted-foreground">Пользователей нет</p>
             )}
           </div>
         </Card>

@@ -36,27 +36,27 @@ export default function SettingsPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     try {
       await changePassword(values).unwrap();
-      toast.success("Password updated");
+      toast.success("Пароль обновлён");
       form.reset();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update password");
+      toast.error("Не удалось обновить пароль");
     }
   });
 
   const handleFlushCache = async () => {
     try {
       await flushCache().unwrap();
-      toast.success("Cache flushed");
+      toast.success("Кэш Redis очищен");
     } catch (error) {
       console.error(error);
-      toast.error("Unable to flush cache");
+      toast.error("Не удалось очистить кэш");
     }
   };
 
   const describe = (query: { data?: { status: string; message?: string }; error?: unknown }) => ({
     status: query.data?.status ?? (query.error ? "down" : "checking"),
-    message: query.data?.message ?? (query.error ? "Unavailable" : "Pending response"),
+    message: query.data?.message ?? (query.error ? "Недоступно" : "Ожидание ответа"),
   });
 
   const services = [
@@ -67,12 +67,12 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="System settings" description="Environment visibility and operational tools" />
+      <SectionHeader title="Системные настройки" description="Просмотр окружения и служебные инструменты" />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Environment</CardTitle>
-            <CardDescription>Read-only env variables</CardDescription>
+            <CardTitle>Окружение</CardTitle>
+            <CardDescription>Переменные среды (только просмотр)</CardDescription>
           </CardHeader>
           <div className="space-y-3 p-6 pt-0 text-sm">
             <div className="flex items-center justify-between rounded-xl border border-border/70 p-3">
@@ -86,27 +86,27 @@ export default function SettingsPage() {
               </div>
             ))}
             <Button variant="outline" onClick={handleFlushCache} isLoading={flushing}>
-              Flush Redis cache
+              Очистить кэш Redis
             </Button>
-            <p className="text-xs text-muted-foreground">Alembic revision: {revision?.revision ?? "unknown"}</p>
+            <p className="text-xs text-muted-foreground">Версия Alembic: {revision?.revision ?? "неизвестно"}</p>
           </div>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Change password</CardTitle>
+            <CardTitle>Смена пароля</CardTitle>
             <CardDescription>/auth/staff/change-password</CardDescription>
           </CardHeader>
           <form onSubmit={onSubmit} className="space-y-4 p-6 pt-0">
             <div>
-              <label className="text-xs uppercase text-muted-foreground">Current password</label>
+              <label className="text-xs uppercase text-muted-foreground">Текущий пароль</label>
               <Input type="password" {...form.register("current_password")} />
             </div>
             <div>
-              <label className="text-xs uppercase text-muted-foreground">New password</label>
+              <label className="text-xs uppercase text-muted-foreground">Новый пароль</label>
               <Input type="password" {...form.register("new_password")} />
             </div>
             <Button type="submit" isLoading={changing}>
-              Update password
+              Обновить пароль
             </Button>
           </form>
         </Card>
@@ -114,8 +114,8 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Service diagnostics</CardTitle>
-          <CardDescription>Ping backing services</CardDescription>
+          <CardTitle>Диагностика сервисов</CardTitle>
+          <CardDescription>Проверка доступности сервисов</CardDescription>
         </CardHeader>
         <div className="grid gap-4 p-6 pt-0 md:grid-cols-3">
           {services.map((service) => (

@@ -33,37 +33,37 @@ export default function CashbackPage() {
 
   const columns: ColumnDef<CashbackTransaction>[] = [
     {
-      header: "User",
+      header: "Клиент",
       cell: ({ row }) => (
         <div>
           <p className="font-semibold">
             {row.original.user.first_name} {row.original.user.last_name}
           </p>
-          <p className="text-xs text-muted-foreground">{row.original.user.id}</p>
+          <p className="text-xs text-muted-foreground">ID: {row.original.user.id}</p>
         </div>
       ),
     },
     {
-      header: "Amount",
+      header: "Сумма",
       accessorKey: "amount",
       cell: ({ row }) => <span className="font-semibold text-emerald-600">{formatCurrency(row.original.amount)}</span>,
     },
     {
-      header: "Branch",
+      header: "Филиал",
       accessorKey: "branch",
       cell: ({ row }) => row.original.branch ?? "—",
     },
     {
-      header: "Source",
+      header: "Источник",
       accessorKey: "source",
-      cell: ({ row }) => <Badge>{row.original.source ?? "Manual"}</Badge>,
+      cell: ({ row }) => <Badge>{row.original.source ?? "Ручной"}</Badge>,
     },
     {
-      header: "Staff",
+      header: "Сотрудник",
       cell: ({ row }) => row.original.staff?.name ?? "—",
     },
     {
-      header: "Created",
+      header: "Создано",
       accessorKey: "created_at",
       cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.created_at)}</span>,
     },
@@ -81,13 +81,13 @@ export default function CashbackPage() {
 
   return (
     <div className="space-y-8">
-      <SectionHeader title="Cashback & Loyalty" description="Manual adjustments and analytics" />
+      <SectionHeader title="Кэшбэк и лояльность" description="Ручные корректировки и аналитика" />
 
       <RoleGate minRole="manager">
         <Card>
           <CardHeader>
-            <CardTitle>Manual cashback</CardTitle>
-            <CardDescription>Manager only endpoint /cashback/add</CardDescription>
+            <CardTitle>Ручное начисление</CardTitle>
+            <CardDescription>Только для менеджеров — /cashback/add</CardDescription>
           </CardHeader>
           <div className="p-6 pt-0">
             <CashbackForm />
@@ -98,12 +98,12 @@ export default function CashbackPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Transactions</CardTitle>
-            <CardDescription>Filter by branch or search phone / user ID</CardDescription>
+            <CardTitle>Транзакции</CardTitle>
+            <CardDescription>Фильтр по филиалу или поиск по телефону/ID клиента</CardDescription>
           </CardHeader>
           <div className="flex flex-wrap gap-3 px-6">
             <Input
-              placeholder="Search user"
+              placeholder="Поиск клиента"
               value={filters.search}
               onChange={(event) => {
                 setPage(1);
@@ -111,7 +111,7 @@ export default function CashbackPage() {
               }}
             />
             <Input
-              placeholder="Branch"
+              placeholder="Филиал"
               value={filters.branch}
               onChange={(event) => {
                 setPage(1);
@@ -120,10 +120,10 @@ export default function CashbackPage() {
             />
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => handleExport("csv")} isLoading={isExporting}>
-                Export CSV
+                Экспорт CSV
               </Button>
               <Button variant="outline" onClick={() => handleExport("xlsx")} isLoading={isExporting}>
-                Export Excel
+                Экспорт Excel
               </Button>
             </div>
           </div>
@@ -140,8 +140,8 @@ export default function CashbackPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Loyalty analytics</CardTitle>
-            <CardDescription>Tiers close to promotion</CardDescription>
+            <CardTitle>Аналитика лояльности</CardTitle>
+            <CardDescription>Клиенты близко к повышению уровня</CardDescription>
           </CardHeader>
           <div className="space-y-4 p-6 pt-0 text-sm">
             <LoyaltyPieChart data={analytics} />
@@ -153,12 +153,12 @@ export default function CashbackPage() {
                       {item.user.first_name} {item.user.last_name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Needs {item.missingPoints} pts for {item.user.loyalty?.next_level ?? "next tier"}
+                      Нужен {item.missingPoints} балл(ов) до уровня {item.user.loyalty?.next_level ?? "—"}
                     </p>
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground">No users close to next tier</p>
+                <p className="text-muted-foreground">Нет клиентов близко к следующему уровню</p>
               )}
             </div>
           </div>

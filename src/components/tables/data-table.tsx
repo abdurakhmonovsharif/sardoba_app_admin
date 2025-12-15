@@ -17,6 +17,7 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string;
   onRowClick?: (row: TData) => void;
   rowClassName?: string;
+  showSearch?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -30,6 +31,7 @@ export function DataTable<TData, TValue>({
   searchPlaceholder = "Search...",
   onRowClick,
   rowClassName,
+  showSearch = true,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -47,7 +49,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {onSearch && (
+      {onSearch && showSearch !== false && (
         <Input placeholder={searchPlaceholder} onChange={(event) => onSearch(event.target.value)} className="max-w-sm" />
       )}
       <div className="overflow-hidden rounded-2xl border border-border bg-white">
@@ -95,14 +97,14 @@ export function DataTable<TData, TValue>({
       {onPageChange && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <p>
-            Page {page} of {totalPages}
+            Страница {page} из {totalPages}
           </p>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => goToPage(page - 1)} disabled={page === 1}>
-              Previous
+              Назад
             </Button>
             <Button variant="outline" onClick={() => goToPage(page + 1)} disabled={page === totalPages}>
-              Next
+              Далее
             </Button>
           </div>
         </div>

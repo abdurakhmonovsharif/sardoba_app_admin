@@ -7,9 +7,10 @@ import { Select } from "@/components/ui/select";
 
 interface Props {
   onChange: (filters: Record<string, string>) => void;
+  hideWaiter?: boolean;
 }
 
-export function UserFilterBar({ onChange }: Props) {
+export function UserFilterBar({ onChange, hideWaiter }: Props) {
   const [filters, setFilters] = useState({ search: "", loyalty: "", waiter: "" });
 
   const update = (key: string, value: string) => {
@@ -26,16 +27,19 @@ export function UserFilterBar({ onChange }: Props) {
 
   return (
     <div className="grid gap-4 md:grid-cols-4">
-      <Input value={filters.search} onChange={(e) => update("search", e.target.value)} placeholder="Phone, name" />
+      <Input value={filters.search} onChange={(e) => update("search", e.target.value)} placeholder="Телефон или имя" />
       <Select value={filters.loyalty} onChange={(e) => update("loyalty", e.target.value)}>
-        <option value="">All loyalty levels</option>
-        <option value="bronze">Bronze</option>
+        <option value="">Все уровни лояльности</option>
         <option value="silver">Silver</option>
         <option value="gold">Gold</option>
+        <option value="premium">Premium</option>
+        <option value="vip">VIP</option>
       </Select>
-      <Input value={filters.waiter} onChange={(e) => update("waiter", e.target.value)} placeholder="Waiter ID" />
+      {!hideWaiter && (
+        <Input value={filters.waiter} onChange={(e) => update("waiter", e.target.value)} placeholder="ID официанта" />
+      )}
       <Button variant="outline" onClick={clear}>
-        Clear filters
+        Сбросить фильтры
       </Button>
     </div>
   );
