@@ -278,22 +278,29 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
             <h4 className="mb-2 text-sm font-semibold">OTP history</h4>
             <div className="space-y-2 text-sm">
               {otpLogs?.data?.length ? (
-                otpLogs.data.slice(0, 5).map((otp) => (
-                  <div key={otp.id} className="flex items-center justify-between rounded-xl border border-border/60 px-3 py-2">
-                    <div>
-                      <p className="font-medium">
-                        {otp.event === "otp_verification" ? "OTP Verification" : otp.event || otp.action || "Activity"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{formatDate(otp.created_at)}</p>
-                      {otp.meta?.purpose && (
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Purpose: {String(otp.meta.purpose)}</p>
-                      )}
+                otpLogs.data.slice(0, 5).map((otp) => {
+                  const purposeValue = otp.meta?.purpose;
+                  const purposeLabel =
+                    typeof purposeValue === "string" || typeof purposeValue === "number"
+                      ? String(purposeValue)
+                      : null;
+                  return (
+                    <div key={otp.id} className="flex items-center justify-between rounded-xl border border-border/60 px-3 py-2">
+                      <div>
+                        <p className="font-medium">
+                          {otp.event === "otp_verification" ? "OTP Verification" : otp.event || otp.action || "Activity"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{formatDate(otp.created_at)}</p>
+                        {purposeLabel && (
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Purpose: {purposeLabel}</p>
+                        )}
+                      </div>
+                      <Badge variant={otp.status === "success" || otp.status === "sent" ? "success" : "danger"} className="text-[10px] h-5">
+                        {otp.status.toUpperCase()}
+                      </Badge>
                     </div>
-                    <Badge variant={otp.status === "success" || otp.status === "sent" ? "success" : "danger"} className="text-[10px] h-5">
-                      {otp.status.toUpperCase()}
-                    </Badge>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="text-sm text-muted-foreground">No activity history</p>
               )}

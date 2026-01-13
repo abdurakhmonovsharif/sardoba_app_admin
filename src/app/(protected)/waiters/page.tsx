@@ -307,7 +307,6 @@ export default function WaitersPage() {
               pageSize={waiterList?.page_size ?? 10}
               onPageChange={setPage}
               onSearch={handleSearch}
-              searchPlaceholder="Search waiters"
               searchPlaceholder="Поиск официантов"
               onRowClick={(waiter) => {
                 setSelectedWaiterId(waiter.id);
