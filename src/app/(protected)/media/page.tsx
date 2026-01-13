@@ -39,33 +39,40 @@ export default function MediaPage() {
         <div className="grid gap-4 p-6 pt-0 sm:grid-cols-2 lg:grid-cols-3">
           {data?.data?.length ? (
             data.data.map((file) => (
-            <div key={file.id} className="rounded-2xl border border-border/70 p-4">
-              {file.type.startsWith("image") && (
-                <div className="relative mb-3 h-40 w-full overflow-hidden rounded-xl bg-muted/50">
-                  <Image src={file.url} alt={file.name} fill unoptimized className="object-cover" />
+              <div key={file.id ?? file.name} className="rounded-2xl border border-border/70 p-4">
+                {(file.type.startsWith("image") || file.type.includes("photo")) && (
+                  <div className="relative mb-3 h-40 w-full overflow-hidden rounded-xl bg-muted/50">
+                    <Image src={file.url} alt={file.name} fill unoptimized className="object-cover" />
+                  </div>
+                )}
+                <p className="font-semibold truncate" title={file.name}>{file.name}</p>
+                {file.referenced_by !== undefined && (
+                  <p className="text-xs text-muted-foreground">Используется в {file.referenced_by} объектах</p>
+                )}
+                {file.size && (
+                  <p className="text-xs text-muted-foreground">Размер: {(file.size / 1024).toFixed(1)} KB</p>
+                )}
+                <p className="text-xs text-muted-foreground">Загружено {formatDate(file.created_at)}</p>
+                <div className="mt-3 flex gap-2">
+                  <a
+                    href={file.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-3 text-xs font-medium"
+                  >
+                    Предпросмотр
+                  </a>
+                  {file.id && (
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(file.id!)}>
+                      Удалить
+                    </Button>
+                  )}
                 </div>
-              )}
-              <p className="font-semibold">{file.name}</p>
-              <p className="text-xs text-muted-foreground">Используется в {file.referenced_by} объектах</p>
-              <p className="text-xs text-muted-foreground">Загружено {formatDate(file.created_at)}</p>
-              <div className="mt-3 flex gap-2">
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-3 text-xs font-medium"
-                >
-                  Предпросмотр
-                </a>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(file.id)}>
-                  Удалить
-                </Button>
               </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-muted-foreground">Файлы не загружены</p>
-        )}
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">Файлы не загружены</p>
+          )}
         </div>
         <div className="flex items-center justify-between px-6 pb-6 text-sm text-muted-foreground">
           <span>

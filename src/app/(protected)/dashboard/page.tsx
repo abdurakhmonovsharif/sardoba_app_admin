@@ -18,11 +18,11 @@ import {
 import { formatCurrency } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { data: metrics } = useFetchDashboardMetricsQuery();
-  const { data: activity } = useFetchRecentActivityQuery();
-  const { data: health } = useFetchSystemHealthQuery();
-  const { data: loyalty } = useGetLoyaltyAnalyticsQuery();
-  const { data: news } = useGetNewsQuery({ page: 1, page_size: 4 });
+  const { data: metrics, isLoading: isMetricsLoading, isError: isMetricsError } = useFetchDashboardMetricsQuery();
+  const { data: activity, isLoading: isActivityLoading } = useFetchRecentActivityQuery();
+  const { data: health, isLoading: isHealthLoading } = useFetchSystemHealthQuery();
+  const { data: loyalty, isLoading: isLoyaltyLoading, isError: isLoyaltyError } = useGetLoyaltyAnalyticsQuery();
+  const { data: news, isLoading: isNewsLoading } = useGetNewsQuery({ page: 1, page_size: 4 });
 
   return (
     <div className="space-y-10">
@@ -35,77 +35,78 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Уровни лояльности</CardTitle>
-            <CardDescription>Распределение клиентов по уровням</CardDescription>
-          </CardHeader>
-          <LoyaltyPieChart data={loyalty} />
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Последняя активность</CardTitle>
-            <CardDescription>Авторизации, OTP, начисления/списания кэшбэка</CardDescription>
-          </CardHeader>
-          <div className="p-6 pt-0">
-            <ActivityFeed activity={activity} />
-          </div>
-        </Card>
-      </div>
+        {/* Main Area */}
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Состояние платформы</CardTitle>
+              <CardDescription>Redis, Postgres, очереди</CardDescription>
+            </CardHeader>
+            <div className="p-6 pt-0">
+              <HealthGrid statuses={health} />
+            </div>
+          </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Состояние платформы</CardTitle>
-            <CardDescription>Redis, Postgres, очереди</CardDescription>
-          </CardHeader>
-          <div className="p-6 pt-0">
-            <HealthGrid statuses={health} />
-          </div>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Новости</CardTitle>
-            <CardDescription>Последние объявления</CardDescription>
-          </CardHeader>
-          <div className="space-y-4 p-6 pt-0 text-sm">
-            {news?.data?.length ? (
-              news.data.map((item) => (
-                <div key={item.id} className="rounded-xl border border-border/60 p-3">
-                  <p className="font-medium">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.description}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground">Новости отсутствуют</p>
-            )}
-            <Link href="/news" className="inline-flex h-10 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium">
-              Открыть новости
-            </Link>
-          </div>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Финансовый срез</CardTitle>
-          <CardDescription>Итоги из статистики кэшбэка</CardDescription>
-        </CardHeader>
-        <div className="grid gap-4 p-6 pt-0 md:grid-cols-3">
-          <div>
-            <p className="text-sm text-muted-foreground">Начисленный кэшбэк</p>
-            <p className="text-2xl font-semibold">{formatCurrency(metrics?.cashbackIssued ?? 0)}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Активных новостей</p>
-            <p className="text-2xl font-semibold">{metrics?.newsCount ?? 0}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Redis</p>
-            <p className="text-2xl font-semibold">{metrics?.redisHealthy ? "OK" : "Проверить"}</p>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Финансовый срез</CardTitle>
+              <CardDescription>Итоги из статистики кэшбэка</CardDescription>
+            </CardHeader>
+            <div className="grid gap-4 p-6 pt-0 md:grid-cols-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Начисленный кэшбэк</p>
+                <p className="text-2xl font-semibold">{formatCurrency(metrics?.cashbackIssued ?? 0)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Активных новостей</p>
+                <p className="text-2xl font-semibold">{metrics?.newsCount ?? 0}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Redis</p>
+                <p className="text-2xl font-semibold">{metrics?.redisHealthy ? "OK" : "Проверить"}</p>
+              </div>
+            </div>
+          </Card>
         </div>
-      </Card>
+
+        {/* Sidebar Area */}
+        <div className="space-y-6 lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Последняя активность</CardTitle>
+              <CardDescription>Авторизации, OTP, кэшбэк</CardDescription>
+            </CardHeader>
+            <div className="p-6 pt-0">
+              <ActivityFeed activity={activity} />
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Новости</CardTitle>
+              <CardDescription>Последние объявления</CardDescription>
+            </CardHeader>
+            <div className="space-y-4 p-6 pt-0 text-sm">
+              {news?.data?.length ? (
+                news.data.map((item) => (
+                  <div key={item.id} className="rounded-xl border border-border/60 p-3">
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground">Новости отсутствуют</p>
+              )}
+              <Link
+                href="/news"
+                className="inline-flex w-full h-10 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                Открыть новости
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

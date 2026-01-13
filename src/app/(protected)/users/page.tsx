@@ -89,7 +89,7 @@ export default function UsersPage() {
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
           {formatDate(row.original.created_at)}
-        </span> 
+        </span>
       ),
     },
   ];
@@ -99,7 +99,7 @@ export default function UsersPage() {
     setFilters((prev) => ({ ...prev, search: value }));
   };
   console.log(data);
-  
+
   return (
     <div className="space-y-6">
       <SectionHeader
@@ -148,15 +148,15 @@ export default function UsersPage() {
               const fullName = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
               const displayName = user.name ?? (fullName || null);
               return (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">{displayName || `Клиент #${user.id}`}</p>
-                <p className="text-xs text-muted-foreground">{user.phone}</p>
-              </div>
-              <Badge variant={user.is_active === false ? "danger" : "success"}>
-                {user.is_active === false ? "Неактивен" : "Активен"}
-              </Badge>
-            </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">{displayName || `Клиент #${user.id}`}</p>
+                    <p className="text-xs text-muted-foreground">{user.phone}</p>
+                  </div>
+                  <Badge variant={user.is_active === false ? "danger" : "success"}>
+                    {user.is_active === false ? "Неактивен" : "Активен"}
+                  </Badge>
+                </div>
               );
             })()}
             <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
@@ -188,7 +188,7 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <UserDetailDrawer userId={selectedUserId} isOpen={Boolean(selectedUserId)} onClose={() => setSelectedUserId(null)} />
+      <UserDetailDrawer userId={selectedUserId} isOpen={selectedUserId !== null} onClose={() => setSelectedUserId(null)} />
     </div>
   );
 }

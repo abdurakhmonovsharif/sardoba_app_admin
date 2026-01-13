@@ -36,6 +36,7 @@ import type {
   StaffMember,
   StaffRole,
   StaffListResponse,
+  StaffPagination,
   WaiterCreatePayload,
   WaiterUpdatePayload,
   SystemHealth,
@@ -84,7 +85,7 @@ interface BackendLoyalty
       | "cashback_balance",
       number | string
     >
-  > {}
+  > { }
 
 interface BackendUserDetail extends BackendUserListItem {
   email?: string | null;
@@ -122,7 +123,7 @@ interface BackendProduct {
   image_url?: string | null;
 }
 
-const toAbsoluteUrl = (path?: string | null) => {
+export const toAbsoluteUrl = (path?: string | null) => {
   if (!path) return path ?? undefined;
   if (/^https?:\/\//i.test(path)) return path;
 
@@ -152,11 +153,11 @@ const mapUserFromList = (item: BackendUserListItem): User => {
     waiter_id: item.waiter_id,
     waiter: item.waiter_id
       ? {
-          id: item.waiter_id,
-          name: `Waiter #${item.waiter_id}`,
-          phone: "",
-          role: "waiter",
-        }
+        id: item.waiter_id,
+        name: `Waiter #${item.waiter_id}`,
+        phone: "",
+        role: "waiter",
+      }
       : undefined,
     date_of_birth: item.date_of_birth,
     profile_photo_url: toAbsoluteUrl(item.profile_photo_url),
@@ -404,6 +405,8 @@ export const baseApi = createApi({
     }),
     fetchDashboardMetrics: builder.query<DashboardMetrics, void>({
       query: () => ({ url: "/dashboard/metrics" }),
+      transformResponse: (response: DashboardMetrics | { data: DashboardMetrics }) =>
+        "data" in response ? response.data : response,
       providesTags: ["Dashboard"],
     }),
     fetchRecentActivity: builder.query<ActivityItem[], void>({
@@ -414,7 +417,7 @@ export const baseApi = createApi({
       query: () => ({ url: "/health" }),
       providesTags: ["Dashboard"],
     }),
-  getUsers: builder.query<PaginatedResponse<User>, Record<string, string | number | boolean> | undefined>({
+    getUsers: builder.query<PaginatedResponse<User>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/users",
         params,
@@ -429,7 +432,8 @@ export const baseApi = createApi({
     }),
     getUserById: builder.query<User, number>({
       query: (id) => ({ url: `/users/${id}` }),
-      transformResponse: (response: BackendUserDetail) => mapUserFromDetail(response),
+      transformResponse: (response: BackendUserDetail | { data: BackendUserDetail }) =>
+        mapUserFromDetail("data" in response && response.data ? response.data : (response as BackendUserDetail)),
       providesTags: (_result, _error, id) => [{ type: "Users", id }],
     }),
     updateUser: builder.mutation<User, { id: number; body: Partial<User> }>({
@@ -483,7 +487,7 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["Cashback", "Users", "Stats"],
     }),
-  getCashbackTransactions: builder.query<PaginatedResponse<CashbackTransaction>, Record<string, string | number | boolean> | undefined>({
+    getCashbackTransactions: builder.query<PaginatedResponse<CashbackTransaction>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/cashback",
         params,
@@ -496,6 +500,8 @@ export const baseApi = createApi({
     }),
     getLoyaltyAnalytics: builder.query<LoyaltyAnalytics, void>({
       query: () => ({ url: "/cashback/loyalty-analytics" }),
+      transformResponse: (response: LoyaltyAnalytics | { data: LoyaltyAnalytics }) =>
+        "data" in response ? response.data : response,
       providesTags: ["Loyalty"],
     }),
     getStaff: builder.query<StaffMember[], void>({
@@ -612,7 +618,7 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["News"],
     }),
-  getNotifications: builder.query<PaginatedResponse<NotificationItem>, Record<string, string | number | boolean> | undefined>({
+    getNotifications: builder.query<PaginatedResponse<NotificationItem>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/notifications",
         params,
@@ -654,7 +660,7 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["Catalog"],
     }),
-  getProducts: builder.query<PaginatedResponse<Product>, Record<string, string | number | boolean> | undefined>({
+    getProducts: builder.query<PaginatedResponse<Product>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({
         url: "/catalog/products",
         params,
@@ -700,8 +706,14 @@ export const baseApi = createApi({
       query: () => ({ url: "/catalog/sync", method: "POST" }),
       invalidatesTags: ["Catalog"],
     }),
-  getMediaLibrary: builder.query<PaginatedResponse<MediaFile>, Record<string, string | number | boolean> | undefined>({
+    getMediaLibrary: builder.query<PaginatedResponse<MediaFile>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/files", params }),
+      transformResponse: (response: { pagination: StaffPagination; items: MediaFile[] }) => ({
+        data: response.items.map((file) => ({ ...file, url: toAbsoluteUrl(file.url) || "" })),
+        total: response.pagination.total,
+        page: response.pagination.page,
+        page_size: response.pagination.size,
+      }),
       providesTags: ["Media"],
     }),
     deleteMedia: builder.mutation<void, number>({
@@ -745,19 +757,31 @@ export const baseApi = createApi({
       query: () => ({ url: "/system/cache/flush", method: "POST" }),
       invalidatesTags: ["Settings"],
     }),
-  getValidationLogs: builder.query<PaginatedResponse<Record<string, unknown>>, Record<string, string | number | boolean> | undefined>({
+    getValidationLogs: builder.query<PaginatedResponse<Record<string, unknown>>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/logs/validation", params }),
       providesTags: ["Logs"],
     }),
-  getOtpLogs: builder.query<PaginatedResponse<OtpLog>, Record<string, string | number | boolean> | undefined>({
+    getOtpLogs: builder.query<PaginatedResponse<OtpLog>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/logs/otp", params }),
+      transformResponse: (response: { pagination: StaffPagination; items: OtpLog[] }) => ({
+        data: response.items,
+        total: response.pagination.total,
+        page: response.pagination.page,
+        page_size: response.pagination.size,
+      }),
       providesTags: ["Logs"],
     }),
-  getAuthLogs: builder.query<PaginatedResponse<AuthLog>, Record<string, string | number | boolean> | undefined>({
+    getAuthLogs: builder.query<PaginatedResponse<AuthLog>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/logs/auth", params }),
+      transformResponse: (response: { pagination: { page: number; size: number; total: number }; items: AuthLog[] }) => ({
+        data: response.items,
+        total: response.pagination.total,
+        page: response.pagination.page,
+        page_size: response.pagination.size,
+      }),
       providesTags: ["Logs"],
     }),
-  getAuditLogs: builder.query<PaginatedResponse<AuditLog>, Record<string, string | number | boolean> | undefined>({
+    getAuditLogs: builder.query<PaginatedResponse<AuditLog>, Record<string, string | number | boolean> | undefined>({
       query: (params) => ({ url: "/logs/audit", params }),
       providesTags: ["Logs"],
     }),

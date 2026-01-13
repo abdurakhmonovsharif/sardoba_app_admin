@@ -26,7 +26,6 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { title: "Дашборд", href: "/dashboard", icon: LayoutDashboard, roles: ["manager"] },
   { title: "Клиенты", href: "/users", icon: Users2, roles: ["waiter", "manager"] },
-  { title: "Кэшбэк и лояльность", href: "/cashback", icon: ActivitySquare, roles: ["manager"] },
   { title: "Персонал", href: "/staff", icon: ListChecks, roles: ["manager"] },
   { title: "Официанты", href: "/waiters", icon: UserCheck, roles: ["manager"] },
   { title: "Новости", href: "/news", icon: Newspaper, roles: ["manager"] },

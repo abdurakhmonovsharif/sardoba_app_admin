@@ -140,8 +140,12 @@ export interface Transaction {
 export interface OtpLog {
   id: number;
   phone: string;
-  status: "sent" | "failed";
+  status: string;
   created_at: string;
+  event?: string;
+  action?: string;
+  actor_type?: string;
+  meta?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 }
 
@@ -204,12 +208,13 @@ export interface Product {
 }
 
 export interface MediaFile {
-  id: number;
+  id?: number;
   name: string;
   url: string;
   type: string;
-  referenced_by: number;
+  referenced_by?: number;
   created_at: string;
+  size?: number;
 }
 
 export interface WaiterStat {
@@ -237,6 +242,15 @@ export interface AuthLog {
   actor_type: "user" | "staff";
   actor_id: number;
   event: string;
+  status?: string;
+  phone?: string;
+  ip?: string;
+  user?: {
+    id: number;
+    name?: string;
+    phone?: string;
+    role?: string;
+  };
   metadata?: Record<string, unknown>;
   created_at: string;
 }
@@ -254,6 +268,7 @@ export interface AuditLog {
 
 export interface FileUploadResponse {
   url: string;
+  image_url: string;
   id: number;
 }
 

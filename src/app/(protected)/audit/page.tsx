@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SectionHeader } from "@/components/common/section-header";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   useGetAuthLogsQuery,
   useGetOtpLogsQuery,
@@ -14,10 +15,22 @@ import { formatDate } from "@/lib/utils";
 
 export default function AuditPage() {
   const [tab, setTab] = useState("auth");
-  const authLogs = useGetAuthLogsQuery({ page: 1, page_size: 20 }, { skip: tab !== "auth" });
-  const otpLogs = useGetOtpLogsQuery({ page: 1, page_size: 20 }, { skip: tab !== "otp" });
-  const validationLogs = useGetValidationLogsQuery({ page: 1, page_size: 20 }, { skip: tab !== "validation" });
-  const auditLogs = useGetAuditLogsQuery({ page: 1, page_size: 20 }, { skip: tab !== "audit" });
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const authLogs = useGetAuthLogsQuery({ page, page_size: pageSize }, { skip: tab !== "auth" });
+  const otpLogs = useGetOtpLogsQuery({ page, page_size: pageSize }, { skip: tab !== "otp" });
+  const validationLogs = useGetValidationLogsQuery({ page, page_size: pageSize }, { skip: tab !== "validation" });
+  const auditLogs = useGetAuditLogsQuery({ page, page_size: pageSize }, { skip: tab !== "audit" });
+
+  const currentQuery =
+    tab === "auth"
+      ? authLogs
+      : tab === "otp"
+        ? otpLogs
+        : tab === "validation"
+          ? validationLogs
+          : auditLogs;
 
   const renderList = () => {
     switch (tab) {
@@ -27,9 +40,17 @@ export default function AuditPage() {
             items={authLogs.data?.data?.map((log) => ({
               id: log.id,
               title: log.event,
-              subtitle: `Субъект ${log.actor_type} #${log.actor_id}`,
+              subtitle: [
+                log.user?.name ? `Пользователь: ${log.user.name}` : null,
+                log.phone ? `Телефон: ${log.phone}` : null,
+                log.ip ? `IP: ${log.ip}` : null,
+                `Субъект ${log.actor_type} #${log.actor_id}`,
+              ]
+                .filter(Boolean)
+                .join(" · "),
               timestamp: log.created_at,
             }))}
+            isLoading={authLogs.isFetching}
           />
         );
       case "otp":
@@ -41,6 +62,7 @@ export default function AuditPage() {
               subtitle: log.metadata ? JSON.stringify(log.metadata) : "",
               timestamp: log.created_at,
             }))}
+            isLoading={otpLogs.isFetching}
           />
         );
       case "validation":
@@ -52,6 +74,7 @@ export default function AuditPage() {
               subtitle: "Ошибка валидации",
               timestamp: new Date().toISOString(),
             }))}
+            isLoading={validationLogs.isFetching}
           />
         );
       case "audit":
@@ -63,6 +86,7 @@ export default function AuditPage() {
               subtitle: `${log.entity} #${log.entity_id}`,
               timestamp: log.created_at,
             }))}
+            isLoading={auditLogs.isFetching}
           />
         );
       default:
@@ -79,7 +103,14 @@ export default function AuditPage() {
           <CardDescription>Онлайн данные из таблиц аудита</CardDescription>
         </CardHeader>
         <div className="p-6 pt-0">
-          <Tabs defaultValue="auth" value={tab} onValueChange={setTab}>
+          <Tabs
+            defaultValue="auth"
+            value={tab}
+            onValueChange={(value) => {
+              setTab(value);
+              setPage(1);
+            }}
+          >
             <TabsList className="mb-4">
               {[
                 { value: "auth", label: "Авторизация" },
@@ -92,7 +123,16 @@ export default function AuditPage() {
                 </TabsTrigger>
               ))}
             </TabsList>
-            <div>{renderList()}</div>
+            <div className="space-y-4">
+              {renderList()}
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={currentQuery.data?.total ?? 0}
+                isLoading={currentQuery.isFetching}
+                onPageChange={setPage}
+              />
+            </div>
           </Tabs>
         </div>
       </Card>
@@ -100,7 +140,14 @@ export default function AuditPage() {
   );
 }
 
-function LogList({ items }: { items?: { id: number | string; title: string; subtitle?: string; timestamp: string }[] }) {
+function LogList({
+  items,
+  isLoading,
+}: {
+  items?: { id: number | string; title: string; subtitle?: string; timestamp: string }[];
+  isLoading?: boolean;
+}) {
+  if (isLoading) return <p className="text-sm text-muted-foreground">Загрузка...</p>;
   if (!items?.length) return <p className="text-sm text-muted-foreground">Нет записей</p>;
   return (
     <ul className="space-y-3">
@@ -112,5 +159,40 @@ function LogList({ items }: { items?: { id: number | string; title: string; subt
         </li>
       ))}
     </ul>
+  );
+}
+
+function Pagination({
+  page,
+  pageSize,
+  total,
+  isLoading,
+  onPageChange,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  isLoading?: boolean;
+  onPageChange: (page: number) => void;
+}) {
+  const hasPrev = page > 1;
+  const hasNext = page * pageSize < total;
+
+  if (!total) return null;
+
+  return (
+    <div className="flex items-center justify-between text-sm text-muted-foreground">
+      <span>
+        Страница {page} · {Math.min(page * pageSize, total)} из {total}
+      </span>
+      <div className="space-x-2">
+        <Button variant="outline" size="sm" disabled={!hasPrev || isLoading} onClick={() => onPageChange(page - 1)}>
+          Назад
+        </Button>
+        <Button variant="outline" size="sm" disabled={!hasNext || isLoading} onClick={() => onPageChange(page + 1)}>
+          Далее
+        </Button>
+      </div>
+    </div>
   );
 }
