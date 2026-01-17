@@ -53,7 +53,7 @@ const buildReferralCode = (name = "") => {
 };
 
 export default function WaitersPage() {
-  const [filters, setFilters] = useState({ search: "" });
+  const [filters, setFilters] = useState({ search: "", branch: "" });
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [selectedWaiterId, setSelectedWaiterId] = useState<number | null>(null);
@@ -68,8 +68,16 @@ export default function WaitersPage() {
     if (filters.search) {
       params.search = filters.search;
     }
+    if (filters.branch) {
+      const branchId = Number(filters.branch);
+      if (!Number.isNaN(branchId)) {
+        params.branch_id = branchId;
+      } else {
+        params.branch = filters.branch;
+      }
+    }
     return params;
-  }, [filters.search, page]);
+  }, [filters.search, filters.branch, page]);
 
   const { data: waiterList } = useGetWaitersQuery(queryParams);
   const { data: selectedWaiter } = useGetWaiterByIdQuery(selectedWaiterId ?? 0, {
@@ -103,6 +111,10 @@ export default function WaitersPage() {
   const handleSearch = (value: string) => {
     setPage(1);
     setFilters((prev) => ({ ...prev, search: value }));
+  };
+  const handleBranchFilter = (value: string) => {
+    setPage(1);
+    setFilters((prev) => ({ ...prev, branch: value }));
   };
 
   const handleDelete = async (id: number) => {
@@ -239,35 +251,14 @@ export default function WaitersPage() {
             Редактировать
           </Button>
           <Button
-            variant="ghost"
-            size="sm"
-            onClick={(event) => {
-              event.stopPropagation();
-              setSelectedWaiterId(row.original.id);
-              setIsDetailsOpen(true);
-            }}
-          >
-            Детали
-          </Button>
-          <Button
             variant="destructive"
             size="sm"
             onClick={(event) => {
               event.stopPropagation();
               handleDelete(row.original.id);
-            }}
+            }}  
           >
             Удалить
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(event) => {
-              event.stopPropagation();
-              handleRegenerate(row.original.id);
-            }}
-          >
-            Обновить код
           </Button>
         </div>
       ),
@@ -298,7 +289,31 @@ export default function WaitersPage() {
             <CardTitle>Список официантов</CardTitle>
             <CardDescription>Реферальные коды и активность входов</CardDescription>
           </CardHeader>
-          <div className="p-6">
+          <div className="p-6 space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+              <Input
+                type="search"
+                value={filters.search}
+                onChange={(event) => handleSearch(event.target.value)}
+                placeholder="Поиск официантов"
+                className="flex-1"
+              />
+              <div className="w-full md:w-64">
+                <label className="text-xs uppercase text-muted-foreground">Филиал</label>
+                <Select
+                  value={filters.branch}
+                  onChange={(event) => handleBranchFilter(event.target.value)}
+                  className="mt-1"
+                >
+                  <option value="">Все филиалы</option>
+                  {BRANCHES.map((branch) => (
+                    <option key={branch.value} value={branch.value}>
+                      {branch.label} ({branch.value})
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
             <DataTable
               columns={columns}
               data={waiterList?.data ?? []}
@@ -306,8 +321,6 @@ export default function WaitersPage() {
               page={waiterList?.page ?? page}
               pageSize={waiterList?.page_size ?? 10}
               onPageChange={setPage}
-              onSearch={handleSearch}
-              searchPlaceholder="Поиск официантов"
               onRowClick={(waiter) => {
                 setSelectedWaiterId(waiter.id);
                 setIsDetailsOpen(true);

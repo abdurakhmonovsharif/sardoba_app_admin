@@ -35,8 +35,7 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
   );
   const { data: staff } = useGetStaffQuery(undefined, { skip: !isOpen });
   const { data: waiters } = useGetWaitersQuery({ page: 1, size: 100 }, { skip: !isOpen });
-  const [txPage, setTxPage] = useState(1);
-  const TX_PAGE_SIZE = 10;
+  const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [toggleStatus, { isLoading: isToggling }] = useDeactivateUserMutation();
   const [resetLoyalty, { isLoading: isResettingLoyalty }] = useResetLoyaltyLevelMutation();
@@ -55,7 +54,6 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
 
   useEffect(() => {
     if (user) {
-      setTxPage(1);
       const [firstFromName = "", ...rest] = user.name?.split(" ") ?? [];
       reset({
         first_name: user.first_name ?? firstFromName ?? "",
@@ -66,6 +64,23 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
       });
     }
   }, [user, reset]);
+
+  useEffect(() => {
+    if (!userId) {
+      setIsTransactionsOpen(false);
+    }
+  }, [userId]);
+
+  const userDisplayName = user
+    ? ([user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || `Клиент #${user.id}`)
+    : null;
+
+  const sortedTransactions = (user?.transactions ?? [])
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
 
   const onSubmit = handleSubmit(async (values) => {
     if (!userId) return;
@@ -80,10 +95,10 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
           waiter_id: values.waiter_id ? Number(values.waiter_id) : undefined,
         },
       }).unwrap();
-      toast.success("Profile updated");
+      toast.success("Профиль обновлён");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update user");
+      toast.error("Не удалось обновить профиль");
     }
   });
 
@@ -91,10 +106,10 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
     if (!userId || !user) return;
     try {
       await toggleStatus({ id: userId, is_active: !user.is_active }).unwrap();
-      toast.success(user.is_active ? "User deactivated" : "User reactivated");
+      toast.success(user.is_active ? "Клиент деактивирован" : "Клиент восстановлен");
     } catch (error) {
       console.error(error);
-      toast.error("Operation failed");
+      toast.error("Не удалось выполнить действие");
     }
   };
 
@@ -102,10 +117,10 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
     if (!userId) return;
     try {
       await resetLoyalty({ id: userId, level: "bronze" }).unwrap();
-      toast.success("Loyalty reset");
+      toast.success("Лояльность сброшена");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to reset loyalty");
+      toast.error("Не удалось сбросить лояльность");
     }
   };
 
@@ -113,10 +128,10 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
     if (!userId) return;
     try {
       await resetWallet({ id: userId }).unwrap();
-      toast.success("Wallet cleared");
+      toast.success("Кошелёк очищен");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to reset wallet");
+      toast.error("Не удалось очистить кошелёк");
     }
   };
 
@@ -127,187 +142,241 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
     formData.append("user_id", String(userId));
     try {
       await uploadPhoto(formData).unwrap();
-      toast.success("Photo updated");
+      toast.success("Фото обновлено");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to upload photo");
+      toast.error("Не удалось загрузить фото");
     }
   };
 
   return (
-    <Drawer
-      title={
-        user
-          ? `${[user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || `User #${user.id}`}`
-          : "User details"
-      }
-      isOpen={isOpen}
-      onClose={onClose}
-    >
-      {isLoading && (
-        <div className="flex h-40 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      )}
-      {error && (
-        <div className="flex h-40 flex-col items-center justify-center gap-2 text-destructive">
-          <p className="font-semibold">Failed to load user</p>
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-        </div>
-      )}
-      {!user && !isLoading && !error && <p className="text-sm text-muted-foreground">Select a user to inspect</p>}
-      {user && (
-        <div className="space-y-6">
-          <section className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Phone</p>
-                <p className="font-semibold">{user.phone}</p>
-              </div>
-              <Badge variant={user.is_active ? "success" : "danger"}>{user.is_active ? "Active" : "Inactive"}</Badge>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Waiter</p>
-                <p className="font-medium">
-                  {user.waiter?.name ??
-                    waiters?.data?.find((member) => member.id === user.waiter_id)?.name ??
-                    (user.waiter_id ? `#${user.waiter_id}` : "—")}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Joined</p>
-                <p className="font-medium">{formatDate(user.created_at)}</p>
-              </div>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Name</p>
-                <p className="font-medium">{[user.first_name, user.middleName, user.last_name].filter(Boolean).join(" ") || "—"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Date of birth</p>
-                <p className="font-medium">{formatDate(user.date_of_birth ?? user.dob ?? "")}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Profile photo</p>
-              <div className="flex items-center gap-3">
-                <div className="h-14 w-14 overflow-hidden rounded-full bg-muted">
-                  {user.profile_photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.profile_photo_url} alt={user.name ?? "Profile photo"} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">No photo</div>
-                  )}
-                </div>
-                <input type="file" accept="image/*" className="block w-full text-sm" onChange={handlePhotoChange} />
-              </div>
-            </div>
-            <Button variant="outline" onClick={handleToggle} isLoading={isToggling}>
-              {user.is_active ? "Deactivate" : "Activate"} user
+    <>
+      <Drawer title={userDisplayName ?? "Детали клиента"} isOpen={isOpen} onClose={onClose}>
+        {isLoading && (
+          <div className="flex h-40 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        )}
+        {error && (
+          <div className="flex h-40 flex-col items-center justify-center gap-2 text-destructive">
+            <p className="font-semibold">Не удалось загрузить клиента</p>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              Повторить
             </Button>
-          </section>
-
-          <section className="rounded-2xl border border-border/70 p-4">
-            <h4 className="text-sm font-semibold">Loyalty summary</h4>
-            <div className="mt-3 grid gap-2 text-sm">
-              <p>Points: {user.loyalty?.current_points ?? user.cashback_balance ?? 0}</p>
-              <p>Level: {user.loyalty?.current_level ?? user.level ?? "—"}</p>
-              {user.loyalty?.next_level && (
-                <p>
-                  Next level ({user.loyalty.next_level}) in {user.loyalty?.next_level_threshold ?? 0} pts
-                </p>
-              )}
-            </div>
-            <div className="mt-3 flex gap-2">
-              <Button variant="outline" onClick={handleResetLoyalty} isLoading={isResettingLoyalty}>
-                Reset loyalty
-              </Button>
-              <Button variant="outline" onClick={handleResetWallet} isLoading={isResettingWallet}>
-                Reset wallet
-              </Button>
-            </div>
-          </section>
-
-          <section>
-            <h4 className="mb-2 text-sm font-semibold">Edit profile</h4>
-            <form onSubmit={onSubmit} className="space-y-3">
-              <div className="grid gap-3 md:grid-cols-2">
+          </div>
+        )}
+        {!user && !isLoading && !error && <p className="text-sm text-muted-foreground">Выберите клиента для просмотра</p>}
+        {user && (
+          <div className="space-y-6">
+            <section className="space-y-2">
+              <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-xs uppercase text-muted-foreground">First name</label>
-                  <Input {...register("first_name")} />
+                  <p className="text-sm text-muted-foreground">Телефон</p>
+                  <p className="font-semibold">{user.phone}</p>
+                </div>
+                <Badge variant={user.is_active ? "success" : "danger"}>{user.is_active ? "Активен" : "Неактивен"}</Badge>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Официант</p>
+                  <p className="font-medium">
+                    {user.waiter?.name ??
+                      waiters?.data?.find((member) => member.id === user.waiter_id)?.name ??
+                      (user.waiter_id ? `#${user.waiter_id}` : "—")}
+                  </p>
                 </div>
                 <div>
-                  <label className="text-xs uppercase text-muted-foreground">Last name</label>
-                  <Input {...register("last_name")} />
+                  <p className="text-sm text-muted-foreground">Дата регистрации</p>
+                  <p className="font-medium">{formatDate(user.created_at)}</p>
                 </div>
               </div>
-              <div>
-                <label className="text-xs uppercase text-muted-foreground">Middle name</label>
-                <Input {...register("middleName")} />
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-2 md:grid-cols-2">
                 <div>
-                  <label className="text-xs uppercase text-muted-foreground">Date of birth</label>
-                  <Input {...register("dob")} placeholder="DD.MM.YYYY" />
+                  <p className="text-sm text-muted-foreground">Имя</p>
+                  <p className="font-medium">{[user.first_name, user.middleName, user.last_name].filter(Boolean).join(" ") || "—"}</p>
                 </div>
                 <div>
-                  <label className="text-xs uppercase text-muted-foreground">Waiter</label>
-                  <Select {...register("waiter_id")}>
-                    <option value="">Unassigned</option>
-                    {(waiters?.data ?? staff ?? [])
-                      .filter((member) => member.role?.toLowerCase?.() === "waiter")
-                      .map((member) => (
-                        <option key={member.id} value={member.id?.toString?.() ?? member.id}>
-                          {member.name}
-                        </option>
-                      ))}
-                  </Select>
+                  <p className="text-sm text-muted-foreground">Дата рождения</p>
+                  <p className="font-medium">{formatDate(user.date_of_birth ?? user.dob ?? "")}</p>
                 </div>
               </div>
-              <Button type="submit" isLoading={isUpdating}>
-                Save changes
-              </Button>
-            </form>
-          </section>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Фото профиля</p>
+                <div className="flex items-center gap-3">
+                  <div className="h-14 w-14 overflow-hidden rounded-full bg-muted">
+                    {user.profile_photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.profile_photo_url} alt={user.name ?? "Фото профиля"} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">Фото отсутствует</div>
+                    )}
+                  </div>
+                  <input type="file" accept="image/*" className="block w-full text-sm" onChange={handlePhotoChange} />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={handleToggle} isLoading={isToggling}>
+                  {user.is_active ? "Деактивировать клиента" : "Активировать клиента"}
+                </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsTransactionsOpen(true)}
+                disabled={isLoading}
+              >
+                  Открыть транзакции
+                </Button>
+              </div>
+            </section>
 
-          <section>
-            <h4 className="mb-2 text-sm font-semibold">OTP history</h4>
-            <div className="space-y-2 text-sm">
-              {otpLogs?.data?.length ? (
-                otpLogs.data.slice(0, 5).map((otp) => {
-                  const purposeValue = otp.meta?.purpose;
-                  const purposeLabel =
-                    typeof purposeValue === "string" || typeof purposeValue === "number"
-                      ? String(purposeValue)
-                      : null;
-                  return (
-                    <div key={otp.id} className="flex items-center justify-between rounded-xl border border-border/60 px-3 py-2">
-                      <div>
-                        <p className="font-medium">
-                          {otp.event === "otp_verification" ? "OTP Verification" : otp.event || otp.action || "Activity"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{formatDate(otp.created_at)}</p>
-                        {purposeLabel && (
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Purpose: {purposeLabel}</p>
-                        )}
+            <section className="rounded-2xl border border-border/70 p-4">
+              <h4 className="text-sm font-semibold">Сводка по лояльности</h4>
+              <div className="mt-3 grid gap-2 text-sm">
+                <p>Баллы: {user.loyalty?.current_points ?? user.cashback_balance ?? 0}</p>
+                <p>Уровень: {user.loyalty?.current_level ?? user.level ?? "—"}</p>
+                {user.loyalty?.next_level && (
+                  <p>
+                    До следующего уровня ({user.loyalty.next_level}): {user.loyalty?.next_level_threshold ?? 0} баллов
+                  </p>
+                )}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button variant="outline" onClick={handleResetLoyalty} isLoading={isResettingLoyalty}>
+                  Сбросить лояльность
+                </Button>
+                <Button variant="outline" onClick={handleResetWallet} isLoading={isResettingWallet}>
+                  Очистить кошелёк
+                </Button>
+              </div>
+            </section>
+
+            <section>
+              <h4 className="mb-2 text-sm font-semibold">Редактировать профиль</h4>
+              <form onSubmit={onSubmit} className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="text-xs uppercase text-muted-foreground">Имя</label>
+                    <Input {...register("first_name")} />
+                  </div>
+                  <div>
+                    <label className="text-xs uppercase text-muted-foreground">Фамилия</label>
+                    <Input {...register("last_name")} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs uppercase text-muted-foreground">Отчество</label>
+                  <Input {...register("middleName")} />
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="text-xs uppercase text-muted-foreground">Дата рождения</label>
+                    <Input {...register("dob")} placeholder="DD.MM.YYYY" />
+                  </div>
+                  <div>
+                    <label className="text-xs uppercase text-muted-foreground">Официант</label>
+                    <Select {...register("waiter_id")}>
+                      <option value="">Не назначен</option>
+                      {(waiters?.data ?? staff ?? [])
+                        .filter((member) => member.role?.toLowerCase?.() === "waiter")
+                        .map((member) => (
+                          <option key={member.id} value={member.id?.toString?.() ?? member.id}>
+                            {member.name}
+                          </option>
+                        ))}
+                    </Select>
+                  </div>
+                </div>
+                <Button type="submit" isLoading={isUpdating}>
+                  Сохранить
+                </Button>
+              </form>
+            </section>
+
+            <section>
+              <h4 className="mb-2 text-sm font-semibold">История OTP</h4>
+              <div className="space-y-2 text-sm">
+                {otpLogs?.data?.length ? (
+                  otpLogs.data.slice(0, 5).map((otp) => {
+                    const purposeValue = otp.meta?.purpose;
+                    const purposeLabel =
+                      typeof purposeValue === "string" || typeof purposeValue === "number"
+                        ? String(purposeValue)
+                        : null;
+                    return (
+                      <div key={otp.id} className="flex items-center justify-between rounded-xl border border-border/60 px-3 py-2">
+                        <div>
+                          <p className="font-medium">
+                            {otp.event === "otp_verification" ? "OTP-проверка" : otp.event || otp.action || "Активность"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{formatDate(otp.created_at)}</p>
+                          {purposeLabel && (
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Цель: {purposeLabel}</p>
+                          )}
+                        </div>
+                        <Badge variant={otp.status === "success" || otp.status === "sent" ? "success" : "danger"} className="text-[10px] h-5">
+                          {otp.status.toUpperCase()}
+                        </Badge>
                       </div>
-                      <Badge variant={otp.status === "success" || otp.status === "sent" ? "success" : "danger"} className="text-[10px] h-5">
-                        {otp.status.toUpperCase()}
-                      </Badge>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground">История активности отсутствует</p>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title={userDisplayName ? `Транзакции ${userDisplayName}` : "Транзакции пользователя"}
+        isOpen={isTransactionsOpen}
+        onClose={() => setIsTransactionsOpen(false)}
+        widthClass="max-w-3xl"
+      >
+        {isLoading && (
+          <div className="flex h-40 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        )}
+        {!isLoading && (
+          <div className="space-y-3 py-2">
+            {sortedTransactions.length ? (
+              sortedTransactions.map((tx) => (
+                <div key={tx.id} className="rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold">{tx.description || "Транзакция"}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</p>
+                      {(tx.branch || tx.source) && (
+                        <p className="text-xs text-muted-foreground">
+                          {tx.branch ? `Филиал: ${tx.branch}` : ""}
+                          {tx.source ? `${tx.branch ? " • " : ""}Источник: ${tx.source}` : ""}
+                        </p>
+                      )}
+                      {(tx.staff?.name || tx.staff_id) && (
+                        <p className="text-xs text-muted-foreground">
+                          Сотрудник: {tx.staff?.name ?? `#${tx.staff_id}`}
+                        </p>
+                      )}
                     </div>
-                  );
-                })
-              ) : (
-                <p className="text-sm text-muted-foreground">No activity history</p>
-              )}
-            </div>
-          </section>
-        </div>
-      )}
-    </Drawer>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">{formatCurrency(tx.amount)}</p>
+                      {(typeof tx.balance_before === "number" || typeof tx.balance_after === "number") && (
+                        <p className="text-xs text-muted-foreground">
+                          {typeof tx.balance_before === "number" ? formatCurrency(tx.balance_before) : "—"} →{" "}
+                          {typeof tx.balance_after === "number" ? formatCurrency(tx.balance_after) : "—"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">Транзакции отсутствуют</p>
+            )}
+          </div>
+        )}
+      </Drawer>
+    </>
   );
 }
