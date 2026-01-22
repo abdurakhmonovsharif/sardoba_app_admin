@@ -16,8 +16,6 @@ import {
   useGetWaitersQuery,
   useUpdateUserMutation,
   useDeactivateUserMutation,
-  useResetLoyaltyLevelMutation,
-  useResetWalletMutation,
   useUploadProfilePhotoMutation,
 } from "@/services/base-api";
 
@@ -38,8 +36,6 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
   const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [toggleStatus, { isLoading: isToggling }] = useDeactivateUserMutation();
-  const [resetLoyalty, { isLoading: isResettingLoyalty }] = useResetLoyaltyLevelMutation();
-  const [resetWallet, { isLoading: isResettingWallet }] = useResetWalletMutation();
   const [uploadPhoto] = useUploadProfilePhotoMutation();
 
   const { register, handleSubmit, reset } = useForm({
@@ -65,15 +61,14 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
     }
   }, [user, reset]);
 
-  useEffect(() => {
-    if (!userId) {
-      setIsTransactionsOpen(false);
-    }
-  }, [userId]);
-
   const userDisplayName = user
     ? ([user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || `Клиент #${user.id}`)
     : null;
+
+  const transactionsOpen = Boolean(isTransactionsOpen && userId);
+  const waiterOptions = (waiters?.data ?? staff ?? [])?.filter(
+    (member) => member.role?.toLowerCase?.() === "waiter",
+  );
 
   const sortedTransactions = (user?.transactions ?? [])
     .slice()
@@ -110,28 +105,6 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
     } catch (error) {
       console.error(error);
       toast.error("Не удалось выполнить действие");
-    }
-  };
-
-  const handleResetLoyalty = async () => {
-    if (!userId) return;
-    try {
-      await resetLoyalty({ id: userId, level: "bronze" }).unwrap();
-      toast.success("Лояльность сброшена");
-    } catch (error) {
-      console.error(error);
-      toast.error("Не удалось сбросить лояльность");
-    }
-  };
-
-  const handleResetWallet = async () => {
-    if (!userId) return;
-    try {
-      await resetWallet({ id: userId }).unwrap();
-      toast.success("Кошелёк очищен");
-    } catch (error) {
-      console.error(error);
-      toast.error("Не удалось очистить кошелёк");
     }
   };
 
@@ -206,7 +179,7 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
                   <div className="h-14 w-14 overflow-hidden rounded-full bg-muted">
                     {user.profile_photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.profile_photo_url} alt={user.name ?? "Фото профиля"} className="h-full w-full object-cover" />
+                      <img src={user.profile_photo_url} alt={user.name ?? "Фото профиля"} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">Фото отсутствует</div>
                     )}
@@ -218,11 +191,11 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
                 <Button variant="outline" onClick={handleToggle} isLoading={isToggling}>
                   {user.is_active ? "Деактивировать клиента" : "Активировать клиента"}
                 </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsTransactionsOpen(true)}
-                disabled={isLoading}
-              >
+                <Button
+                  variant="outline"
+                  onClick={() => setIsTransactionsOpen(true)}
+                  disabled={isLoading}
+                >
                   Открыть транзакции
                 </Button>
               </div>
@@ -232,20 +205,6 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
               <h4 className="text-sm font-semibold">Сводка по лояльности</h4>
               <div className="mt-3 grid gap-2 text-sm">
                 <p>Баллы: {user.loyalty?.current_points ?? user.cashback_balance ?? 0}</p>
-                <p>Уровень: {user.loyalty?.current_level ?? user.level ?? "—"}</p>
-                {user.loyalty?.next_level && (
-                  <p>
-                    До следующего уровня ({user.loyalty.next_level}): {user.loyalty?.next_level_threshold ?? 0} баллов
-                  </p>
-                )}
-              </div>
-              <div className="mt-3 flex gap-2">
-                <Button variant="outline" onClick={handleResetLoyalty} isLoading={isResettingLoyalty}>
-                  Сбросить лояльность
-                </Button>
-                <Button variant="outline" onClick={handleResetWallet} isLoading={isResettingWallet}>
-                  Очистить кошелёк
-                </Button>
               </div>
             </section>
 
@@ -275,13 +234,11 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
                     <label className="text-xs uppercase text-muted-foreground">Официант</label>
                     <Select {...register("waiter_id")}>
                       <option value="">Не назначен</option>
-                      {(waiters?.data ?? staff ?? [])
-                        .filter((member) => member.role?.toLowerCase?.() === "waiter")
-                        .map((member) => (
-                          <option key={member.id} value={member.id?.toString?.() ?? member.id}>
-                            {member.name}
-                          </option>
-                        ))}
+                      {waiterOptions.map((member) => (
+                        <option key={member.id} value={member.id?.toString?.() ?? member.id}>
+                          {member.name}
+                        </option>
+                      ))}
                     </Select>
                   </div>
                 </div>
@@ -329,7 +286,7 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
 
       <Drawer
         title={userDisplayName ? `Транзакции ${userDisplayName}` : "Транзакции пользователя"}
-        isOpen={isTransactionsOpen}
+        isOpen={transactionsOpen}
         onClose={() => setIsTransactionsOpen(false)}
         widthClass="max-w-3xl"
       >

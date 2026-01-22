@@ -430,6 +430,14 @@ export const baseApi = createApi({
       }),
       providesTags: ["Users"],
     }),
+    syncUsers: builder.mutation<{ status?: string; detail?: string; message?: string }, { batch_size?: number } | void>({
+      query: ({ batch_size = 500 } = {}) => ({
+        url: "/admin/sync/users",
+        method: "POST",
+        params: { batch_size },
+      }),
+      invalidatesTags: ["Users"],
+    }),
     getUserById: builder.query<User, number>({
       query: (id) => ({ url: `/users/${id}` }),
       transformResponse: (response: BackendUserDetail | { data: BackendUserDetail }) =>
@@ -818,6 +826,7 @@ export const {
   useUpdateStaffMutation,
   useDeleteStaffMutation,
   useRegenerateReferralCodeMutation,
+  useSyncUsersMutation,
   useGetWaitersQuery,
   useGetWaiterByIdQuery,
   useCreateWaiterMutation,

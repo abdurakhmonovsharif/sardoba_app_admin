@@ -8,10 +8,12 @@ import { UserFilterBar } from "@/components/forms/user-filter-bar";
 import { SectionHeader } from "@/components/common/section-header";
 import { UserDetailDrawer } from "@/components/users/user-detail-drawer";
 import { Button } from "@/components/ui/button";
-import { useGetUsersQuery } from "@/services/base-api";
+import { Input } from "@/components/ui/input";
+import { useGetUsersQuery, useSyncUsersMutation } from "@/services/base-api";
 import type { User } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { useAppSelector } from "@/store/hooks";
+import { toast } from "sonner";
 
 export default function UsersPage() {
   const staff = useAppSelector((state) => state.auth.staff);
@@ -19,6 +21,7 @@ export default function UsersPage() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [batchSize, setBatchSize] = useState(500);
   const queryParams = useMemo(() => {
     const params: Record<string, string | number | boolean> = {
       page,
@@ -34,6 +37,7 @@ export default function UsersPage() {
     return params;
   }, [filters, page, isWaiter, staff?.id]);
   const { data } = useGetUsersQuery(queryParams);
+  const [syncUsers, { isLoading: syncingUsers }] = useSyncUsersMutation();
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / (data?.page_size ?? 10)));
 
   const columns: ColumnDef<User>[] = [
@@ -98,7 +102,16 @@ export default function UsersPage() {
     setPage(1);
     setFilters((prev) => ({ ...prev, search: value }));
   };
-  console.log(data);
+  const handleSync = async () => {
+    const size = Math.max(1, Number(batchSize) || 0);
+    try {
+      await syncUsers({ batch_size: size }).unwrap();
+      toast.success("Синхронизация пользователей запущена");
+    } catch (error) {
+      console.error(error);
+      toast.error("Не удалось запустить синхронизацию");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -106,10 +119,27 @@ export default function UsersPage() {
         title="Управление клиентами"
         description="Поиск, редактирование и аудит участников программы лояльности"
         action={
-          isWaiter && (
+          isWaiter ? (
             <Badge variant="outline" className="text-sm">
               Клиентов: {data?.total ?? 0}
             </Badge>
+          ) : (
+            <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={batchSize}
+                  onChange={(e) => setBatchSize(Number(e.target.value) || 0)}
+                  className="w-28"
+                  placeholder="batch_size"
+                />
+                <Button variant="outline" onClick={handleSync} isLoading={syncingUsers}>
+                  Синхронизировать пользователей
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground sm:text-sm">Клиентов: {data?.total ?? 0}</p>
+            </div>
           )
         }
       />
