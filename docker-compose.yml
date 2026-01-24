@@ -4,6 +4,7 @@ services:
   app:
     container_name: sardoba_app_admin
     build: .
+    init: true
     ports:
       - "3000:3000"
     env_file:
