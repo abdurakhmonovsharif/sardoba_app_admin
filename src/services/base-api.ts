@@ -275,6 +275,8 @@ const mapProduct = (item: BackendProduct): Product => ({
 
 // Use Next.js API proxy to bypass CORS issues when communicating with backend
 const PROXY_BASE_URL = "/api/proxy";
+const BACKEND_COOLDOWN_MS = 30_000; // prevent hammering backend when it is unreachable
+let backendUnavailableUntil = 0;
 
 const normalizeRole = (role?: string): StaffRole => {
   const normalized = role?.toLowerCase();
@@ -321,6 +323,24 @@ const normalizeAuthPayload = (
   return null;
 };
 
+const isConnectivityError = (error?: FetchBaseQueryError) => {
+  if (!error) return false;
+  if (error.status === "FETCH_ERROR") return true;
+
+  if (typeof error.status === "number" && error.status >= 500) {
+    const errorData =
+      typeof error.data === "object" && error.data !== null
+        ? (error.data as { detail?: string; message?: string })
+        : null;
+    const detail = errorData?.detail ?? errorData?.message;
+    if (typeof detail === "string" && /proxy request failed|failed to fetch|connect/i.test(detail)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: PROXY_BASE_URL,
   credentials: "include",
@@ -339,7 +359,22 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   api,
   extraOptions,
 ) => {
+  if (backendUnavailableUntil > Date.now()) {
+    return {
+      error: {
+        status: 503,
+        data: { detail: "Backend unavailable. Please retry later." },
+      },
+    };
+  }
+
   const result = await rawBaseQuery(args, api, extraOptions);
+
+  if (isConnectivityError(result.error)) {
+    backendUnavailableUntil = Date.now() + BACKEND_COOLDOWN_MS;
+    return result;
+  }
+
   if (result.error?.status === 401 || result.error?.status === 403) {
     const refresh = (api.getState() as RootState)?.auth?.refresh;
     if (!refresh) {
