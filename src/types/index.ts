@@ -120,8 +120,10 @@ export interface User {
   surname?: string | null;
   middleName?: string | null;
   is_deleted?: boolean;
+  giftget?: boolean;
   transactions?: Transaction[];
   files?: MediaFile[];
+  cards?: UserCard[];
 }
 
 export interface Transaction {
@@ -159,6 +161,15 @@ export interface CashbackPayload {
 
 export interface CashbackTransaction extends Transaction {
   user: Pick<User, "id" | "first_name" | "last_name">;
+}
+
+export interface UserCard {
+  id: number;
+  user_id: number;
+  card_number: string;
+  card_track?: string | null;
+  iiko_card_id?: string | null;
+  created_at?: string;
 }
 
 export interface LoyaltyAnalytics {

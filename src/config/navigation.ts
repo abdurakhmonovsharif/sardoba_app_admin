@@ -1,12 +1,10 @@
 import type * as React from "react";
 import {
-  ActivitySquare,
   BellRing,
   Cpu,
   FilePieChart,
   FolderArchive,
   LayoutDashboard,
-  ListChecks,
   Newspaper,
   Settings2,
   Siren,

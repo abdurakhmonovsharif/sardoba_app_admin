@@ -5,24 +5,21 @@ import { Activity, Gift, ShieldCheck, Users2 } from "lucide-react";
 import { MetricCard } from "@/components/common/metric-card";
 import { ActivityFeed } from "@/components/common/activity-feed";
 import { HealthGrid } from "@/components/common/health-grid";
-import { LoyaltyPieChart } from "@/components/charts/loyalty-pie";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SectionHeader } from "@/components/common/section-header";
 import {
   useFetchDashboardMetricsQuery,
   useFetchRecentActivityQuery,
   useFetchSystemHealthQuery,
-  useGetLoyaltyAnalyticsQuery,
   useGetNewsQuery,
 } from "@/services/base-api";
 import { formatCurrency } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { data: metrics, isLoading: isMetricsLoading, isError: isMetricsError } = useFetchDashboardMetricsQuery();
-  const { data: activity, isLoading: isActivityLoading } = useFetchRecentActivityQuery();
-  const { data: health, isLoading: isHealthLoading } = useFetchSystemHealthQuery();
-  const { data: loyalty, isLoading: isLoyaltyLoading, isError: isLoyaltyError } = useGetLoyaltyAnalyticsQuery();
-  const { data: news, isLoading: isNewsLoading } = useGetNewsQuery({ page: 1, page_size: 4 });
+  const { data: metrics } = useFetchDashboardMetricsQuery();
+  const { data: activity } = useFetchRecentActivityQuery();
+  const { data: health } = useFetchSystemHealthQuery();
+  const { data: news } = useGetNewsQuery({ page: 1, page_size: 4 });
 
   return (
     <div className="space-y-10">

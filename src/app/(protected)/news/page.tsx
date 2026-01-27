@@ -4,7 +4,7 @@ import { useEffect, useState, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Camera, X as CloseIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Camera } from "lucide-react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { SectionHeader } from "@/components/common/section-header";
 import { Card } from "@/components/ui/card";

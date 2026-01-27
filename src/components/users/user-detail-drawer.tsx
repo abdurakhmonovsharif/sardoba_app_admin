@@ -3,12 +3,14 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import Image from "next/image";
 import { Drawer } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import QRCode from "qrcode";
 import {
   useGetUserByIdQuery,
   useGetOtpLogsQuery,
@@ -18,6 +20,7 @@ import {
   useDeactivateUserMutation,
   useUploadProfilePhotoMutation,
 } from "@/services/base-api";
+import type { StaffMember, UserCard } from "@/types";
 
 interface Props {
   userId: number | null;
@@ -34,6 +37,9 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
   const { data: staff } = useGetStaffQuery(undefined, { skip: !isOpen });
   const { data: waiters } = useGetWaitersQuery({ page: 1, size: 100 }, { skip: !isOpen });
   const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
+  const [qrCardNumber, setQrCardNumber] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [isQrGenerating, setIsQrGenerating] = useState(false);
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [toggleStatus, { isLoading: isToggling }] = useDeactivateUserMutation();
   const [uploadPhoto] = useUploadProfilePhotoMutation();
@@ -66,9 +72,45 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
     : null;
 
   const transactionsOpen = Boolean(isTransactionsOpen && userId);
-  const waiterOptions = (waiters?.data ?? staff ?? [])?.filter(
+  const normalizeStaffList = (value: unknown): StaffMember[] => {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") {
+      const maybeItems = (value as { items?: unknown; data?: unknown }).items ?? (value as { items?: unknown; data?: unknown }).data;
+      if (Array.isArray(maybeItems)) return maybeItems;
+    }
+    return [];
+  };
+
+  const waiterSource: StaffMember[] =
+    ([waiters?.data, waiters, staff] as unknown[])
+      .map(normalizeStaffList)
+      .find((list) => list.length) ?? [];
+
+  const waiterOptions = waiterSource.filter(
     (member) => member.role?.toLowerCase?.() === "waiter",
   );
+  const userCards: UserCard[] = (user?.cards ?? []).filter((card): card is UserCard => Boolean(card));
+
+  const openQrForCard = async (cardNumber: string) => {
+    setQrCardNumber(cardNumber);
+    setQrDataUrl(null);
+    setIsQrGenerating(true);
+    try {
+      const url = await QRCode.toDataURL(cardNumber, { margin: 2, width: 320 });
+      setQrDataUrl(url);
+    } catch (err) {
+      console.error("Failed to generate QR", err);
+      setQrDataUrl(null);
+    } finally {
+      setIsQrGenerating(false);
+    }
+  };
+
+  const closeQr = () => {
+    setQrCardNumber(null);
+    setQrDataUrl(null);
+    setIsQrGenerating(false);
+  };
 
   const sortedTransactions = (user?.transactions ?? [])
     .slice()
@@ -186,6 +228,41 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
                   </div>
                   <input type="file" accept="image/*" className="block w-full text-sm" onChange={handlePhotoChange} />
                 </div>
+              </div>
+              <div className="space-y-3 rounded-2xl border border-border/70 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Карта клиента</p>
+                  {userCards.length ? (
+                    <Badge variant="outline" className="text-[11px]">
+                      {userCards.length}
+                    </Badge>
+                  ) : null}
+                </div>
+                {userCards.length ? (
+                  <div className="space-y-3">
+                    {userCards.map((card) => (
+                      <div key={card.id ?? card.card_number} className="rounded-xl border border-border/60 p-3">
+                        <p className="text-xs uppercase text-muted-foreground">Номер карты</p>
+                        <p className="font-mono text-sm">{card.card_number ?? "—"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Добавлена: {formatDate(card.created_at, "dd MMM yyyy, HH:mm")}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!card.card_number}
+                            onClick={() => card.card_number && openQrForCard(card.card_number)}
+                          >
+                            QR-код
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Карта не привязана</p>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={handleToggle} isLoading={isToggling}>
@@ -332,6 +409,41 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
               <p className="text-sm text-muted-foreground">Транзакции отсутствуют</p>
             )}
           </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title="QR-код карты"
+        isOpen={Boolean(qrCardNumber)}
+        onClose={closeQr}
+        widthClass="max-w-sm"
+      >
+        {qrCardNumber ? (
+          <div className="flex flex-col items-center gap-3 py-4">
+            {isQrGenerating && (
+              <div className="flex h-60 w-full items-center justify-center">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              </div>
+            )}
+            {!isQrGenerating && qrDataUrl && (
+              <Image
+                src={qrDataUrl}
+                alt={`QR код для карты ${qrCardNumber}`}
+                width={256}
+                height={256}
+                className="h-64 w-64 rounded-xl border border-border/70 bg-white p-4 object-contain"
+              />
+            )}
+            {!isQrGenerating && !qrDataUrl && (
+              <p className="text-sm text-muted-foreground">Не удалось создать QR-код</p>
+            )}
+            <p className="text-sm font-mono text-center">{qrCardNumber}</p>
+            <p className="text-xs text-muted-foreground text-center">
+              Покажите этот QR официанту или отсканируйте в кассе.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Карта не выбрана</p>
         )}
       </Drawer>
     </>

@@ -69,23 +69,22 @@ interface BackendUserListItem {
   level?: string;
 }
 
-interface BackendLoyalty
-  extends Partial<
-    Record<
-      | "level"
-      | "current_level"
-      | "current_level_points"
-      | "current_level_min_points"
-      | "next_level"
-      | "next_level_req_points"
-      | "next_level_req_level"
-      | "points_to_next_level"
-      | "next_level_cashback_percent"
-      | "next_level_progress"
-      | "cashback_balance",
-      number | string
-    >
-  > { }
+type BackendLoyalty = Partial<
+  Record<
+    | "level"
+    | "current_level"
+    | "current_level_points"
+    | "current_level_min_points"
+    | "next_level"
+    | "next_level_req_points"
+    | "next_level_req_level"
+    | "points_to_next_level"
+    | "next_level_cashback_percent"
+    | "next_level_progress"
+    | "cashback_balance",
+    number | string
+  >
+>;
 
 interface BackendUserDetail extends BackendUserListItem {
   email?: string | null;
@@ -96,6 +95,14 @@ interface BackendUserDetail extends BackendUserListItem {
   updated_at?: string;
   waiter?: StaffMember;
   loyalty?: BackendLoyalty;
+  cards?: Array<{
+    id: number;
+    user_id: number;
+    card_number: string;
+    card_track?: string | null;
+    iiko_card_id?: string | null;
+    created_at?: string;
+  }>;
   transactions?: Array<
     BackendUserListItem & {
       id: number;
@@ -238,6 +245,15 @@ const mapUserFromDetail = (item: BackendUserDetail): User => {
       ...file,
       url: toAbsoluteUrl(file.url) ?? file.url,
     })),
+    cards:
+      item.cards?.map((card) => ({
+        id: card.id,
+        user_id: card.user_id,
+        card_number: card.card_number,
+        card_track: card.card_track ?? null,
+        iiko_card_id: card.iiko_card_id ?? null,
+        created_at: card.created_at,
+      })) ?? [],
   };
 };
 
@@ -437,6 +453,16 @@ export const baseApi = createApi({
         params: { batch_size },
       }),
       invalidatesTags: ["Users"],
+    }),
+    syncUserById: builder.mutation<
+      { success?: boolean; user_id?: number; phone?: string; iiko_customer_id?: string | null; iiko_wallet_id?: string | null; error?: string },
+      number
+    >({
+      query: (id) => ({
+        url: `/admin/sync/users/${id}`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, id) => [{ type: "Users", id }],
     }),
     getUserById: builder.query<User, number>({
       query: (id) => ({ url: `/users/${id}` }),
@@ -861,4 +887,5 @@ export const {
   useGetAuditLogsQuery,
   useGetDbRevisionQuery,
   usePingServiceQuery,
+  useSyncUserByIdMutation,
 } = baseApi;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { RefreshCcw } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/tables/data-table";
@@ -9,7 +10,7 @@ import { SectionHeader } from "@/components/common/section-header";
 import { UserDetailDrawer } from "@/components/users/user-detail-drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useGetUsersQuery, useSyncUsersMutation } from "@/services/base-api";
+import { useGetUsersQuery, useSyncUserByIdMutation, useSyncUsersMutation } from "@/services/base-api";
 import type { User } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { useAppSelector } from "@/store/hooks";
@@ -22,6 +23,7 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [batchSize, setBatchSize] = useState(500);
+  const [syncingUserId, setSyncingUserId] = useState<number | null>(null);
   const queryParams = useMemo(() => {
     const params: Record<string, string | number | boolean> = {
       page,
@@ -38,6 +40,7 @@ export default function UsersPage() {
   }, [filters, page, isWaiter, staff?.id]);
   const { data } = useGetUsersQuery(queryParams);
   const [syncUsers, { isLoading: syncingUsers }] = useSyncUsersMutation();
+  const [syncUserById] = useSyncUserByIdMutation();
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / (data?.page_size ?? 10)));
 
   const columns: ColumnDef<User>[] = [
@@ -96,11 +99,47 @@ export default function UsersPage() {
         </span>
       ),
     },
+    {
+      header: "",
+      id: "actions",
+      cell: ({ row }) => (
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+          leftIcon={<RefreshCcw size={16} />}
+          isLoading={syncingUserId === row.original.id}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleSyncUser(row.original.id);
+          }}
+        >
+          Sync
+        </Button>
+      ),
+      meta: { align: "right" },
+    },
   ];
 
   const handleSearch = (value: string) => {
     setPage(1);
     setFilters((prev) => ({ ...prev, search: value }));
+  };
+  const handleSyncUser = async (id: number) => {
+    setSyncingUserId(id);
+    try {
+      const result = await syncUserById(id).unwrap();
+      if (result?.success === false) {
+        toast.error(result?.error ?? "Не удалось синхронизировать пользователя");
+      } else {
+        toast.success("Синхронизация пользователя запущена");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Не удалось синхронизировать пользователя");
+    } finally {
+      setSyncingUserId(null);
+    }
   };
   const handleSync = async () => {
     const size = Math.max(1, Number(batchSize) || 0);
@@ -168,11 +207,20 @@ export default function UsersPage() {
 
       <div className="grid gap-3 md:hidden">
         {(data?.data ?? []).map((user) => (
-          <button
+          <div
             key={user.id}
+            role="button"
+            tabIndex={isWaiter ? -1 : 0}
             onClick={isWaiter ? undefined : () => setSelectedUserId(user.id)}
-            className="rounded-2xl border border-border/70 bg-white p-4 text-left shadow-sm transition hover:border-primary/50 disabled:cursor-not-allowed"
-            disabled={isWaiter}
+            onKeyDown={(event) => {
+              if (isWaiter) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSelectedUserId(user.id);
+              }
+            }}
+            aria-disabled={isWaiter}
+            className="rounded-2xl border border-border/70 bg-white p-4 text-left shadow-sm transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed"
           >
             {(() => {
               const fullName = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
@@ -196,7 +244,23 @@ export default function UsersPage() {
             <div className="mt-2 text-xs text-muted-foreground">
               Лояльность: {user.loyalty?.current_level ?? user.level ?? "—"} • {user.loyalty?.current_points ?? user.cashback_balance ?? 0} баллов
             </div>
-          </button>
+            <div className="mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                leftIcon={<RefreshCcw size={16} />}
+                isLoading={syncingUserId === user.id}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  handleSyncUser(user.id);
+                }}
+              >
+                Sync
+              </Button>
+            </div>
+          </div>
         ))}
         {!data?.data?.length && <p className="text-sm text-muted-foreground">Клиентов нет</p>}
 
