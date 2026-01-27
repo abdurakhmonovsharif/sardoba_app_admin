@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useGetUsersQuery, useSyncUserByIdMutation, useSyncUsersMutation } from "@/services/base-api";
 import type { User } from "@/types";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatUZS } from "@/lib/utils";
 import { useAppSelector } from "@/store/hooks";
 import { toast } from "sonner";
 
@@ -142,14 +142,7 @@ export default function UsersPage() {
     }
   };
   const handleSync = async () => {
-    const size = Math.max(1, Number(batchSize) || 0);
-    try {
-      await syncUsers({ batch_size: size }).unwrap();
-      toast.success("Синхронизация пользователей запущена");
-    } catch (error) {
-      console.error(error);
-      toast.error("Не удалось запустить синхронизацию");
-    }
+   
   };
 
   return (
@@ -163,22 +156,7 @@ export default function UsersPage() {
               Клиентов: {data?.total ?? 0}
             </Badge>
           ) : (
-            <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={1}
-                  value={batchSize}
-                  onChange={(e) => setBatchSize(Number(e.target.value) || 0)}
-                  className="w-28"
-                  placeholder="batch_size"
-                />
-                <Button variant="outline" onClick={handleSync} isLoading={syncingUsers}>
-                  Синхронизировать пользователей
-                </Button>
-              </div>
               <p className="text-xs text-muted-foreground sm:text-sm">Клиентов: {data?.total ?? 0}</p>
-            </div>
           )
         }
       />
@@ -242,7 +220,7 @@ export default function UsersPage() {
               <span>{formatDate(user.created_at ?? "")}</span>
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
-              Лояльность: {user.loyalty?.current_level ?? user.level ?? "—"} • {user.loyalty?.current_points ?? user.cashback_balance ?? 0} баллов
+              Лояльность: {formatUZS(user.cashback_balance ?? 0)} баллов
             </div>
             <div className="mt-3">
               <Button

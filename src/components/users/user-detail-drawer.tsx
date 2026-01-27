@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatUZS } from "@/lib/utils";
 import QRCode from "qrcode";
 import {
   useGetUserByIdQuery,
@@ -281,7 +281,7 @@ export function UserDetailDrawer({ userId, isOpen, onClose }: Props) {
             <section className="rounded-2xl border border-border/70 p-4">
               <h4 className="text-sm font-semibold">Сводка по лояльности</h4>
               <div className="mt-3 grid gap-2 text-sm">
-                <p>Баллы: {user.loyalty?.current_points ?? user.cashback_balance ?? 0}</p>
+                <p>Баллы: {formatUZS(user.cashback_balance ?? 0)}</p>
               </div>
             </section>
 
